@@ -1,0 +1,21 @@
+services:
+  # Backend API Service
+  - type: web
+    name: bms-backend
+    runtime: python
+    plan: free
+    buildCommand: "cd backend && pip install -r requirements.txt"
+    startCommand: "cd backend && uvicorn server:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: MONGO_URL
+        sync: false  # Set this manually in Render dashboard
+      - key: DB_NAME
+        value: bms_inventory
+      - key: JWT_SECRET
+        generateValue: true  # Render will generate a random secret
+      - key: CORS_ORIGINS
+        sync: false  # Set this to your Netlify URL
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+    healthCheckPath: /api/settings
+

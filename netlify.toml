@@ -1,0 +1,16 @@
+[build]
+  # Build command
+  command = "cd frontend && yarn install && yarn build"
+  
+  # Directory with the build output
+  publish = "frontend/build"
+
+# Redirects for React Router (SPA)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Environment variables (set these in Netlify dashboard)
+# REACT_APP_BACKEND_URL = your Render backend URL
+
