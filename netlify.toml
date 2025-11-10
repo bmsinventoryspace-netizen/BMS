@@ -6,8 +6,8 @@
   publish = "frontend/build"
 
 [build.environment]
-  # Force Node 18 for compatibility
-  NODE_VERSION = "18"
+  # Force Node 20 for React Router v7 compatibility
+  NODE_VERSION = "20"
 
 # Redirects for React Router (SPA)
 [[redirects]]
