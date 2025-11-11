@@ -1025,10 +1025,10 @@ async def seed_database():
     # Vérifier si des articles existent déjà
     existing_count = await db.articles.count_documents({})
     if existing_count > 0:
-        confirm = input(f"⚠️  Il y a déjà {existing_count} articles dans la base. Continuer quand même ? (y/N): ")
-        if confirm.lower() != 'y':
-            print("❌ Annulé.")
-            return
+        print(f"ℹ️  Il y a déjà {existing_count} articles dans la base.")
+        print("🗑️  Suppression des anciens articles...")
+        await db.articles.delete_many({})
+        print("✅ Anciens articles supprimés. Ajout des nouveaux...")
     
     # Get next ID
     last_article = await db.articles.find_one({}, {'_id': 0, 'id': 1}, sort=[('id', -1)])
