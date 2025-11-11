@@ -52,31 +52,43 @@ const Huiles = () => {
     setFilteredLiquides(filtered);
   };
 
-  const getBarColor = (liquide) => {
-    const current = liquide.litres || 0;
-    const min = liquide.quantite_min || 0;
-    const usage = liquide.usage_hebdo || 0;
-
-    if (current <= min) return '#ef4444'; // red
-    if (usage > 0 && current <= min + usage) return '#f59e0b'; // orange
-    return '#10b981'; // green
+  const getBarColor = (pourcentage) => {
+    if (pourcentage <= 25) return '#ef4444'; // rouge - critique
+    if (pourcentage <= 50) return '#f59e0b'; // orange - faible
+    if (pourcentage <= 75) return '#fbbf24'; // jaune - moyen
+    return '#10b981'; // vert - bon
   };
 
-  const getStatusText = (liquide) => {
-    const current = liquide.litres || 0;
-    const min = liquide.quantite_min || 0;
-    const usage = liquide.usage_hebdo || 0;
-
-    if (current <= min) return '⚠️ Stock critique';
-    if (usage > 0 && current <= min + usage) return '⚠️ Stock faible';
-    return '✓ Stock correct';
+  const getStatusText = (pourcentage) => {
+    if (pourcentage <= 25) return '⚠️ Critique';
+    if (pourcentage <= 50) return '⚠️ Faible';
+    if (pourcentage <= 75) return '📊 Moyen';
+    return '✓ Bon';
   };
 
-  const chartData = filteredLiquides.map(liq => ({
-    nom: liq.nom,
-    litres: liq.litres || 0,
-    color: getBarColor(liq),
-  }));
+  const calculatePercentage = (liquide) => {
+    const current = liquide.litres || 0;
+    const souhaite = liquide.quantite_min || 0;
+    
+    if (souhaite === 0) return 100; // Si pas de quantité souhaitée, considérer comme plein
+    
+    const pourcentage = (current / souhaite) * 100;
+    return Math.min(Math.round(pourcentage), 100); // Limiter à 100%
+  };
+
+  // Créer les données du graphique avec pourcentages et tri
+  const chartData = filteredLiquides
+    .map(liq => {
+      const pourcentage = calculatePercentage(liq);
+      return {
+        nom: liq.nom,
+        pourcentage: pourcentage,
+        color: getBarColor(pourcentage),
+        litres: liq.litres || 0,
+        quantite_min: liq.quantite_min || 0
+      };
+    })
+    .sort((a, b) => b.pourcentage - a.pourcentage); // Tri décroissant par pourcentage
 
   const handleQuantityUpdate = async (type) => {
     if (!selectedLiquide || !quantityChange) return;
@@ -109,20 +121,66 @@ const Huiles = () => {
         {/* Chart */}
         {chartData.length > 0 && (
           <div className="glass rounded-2xl p-6 shadow-md" data-testid="chart-section">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Niveaux de stock</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              Taux de remplissage
+              <span className="text-sm font-normal text-gray-500 ml-2">
+                (% actuel / quantité souhaitée)
+              </span>
+            </h2>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="nom" angle={-45} textAnchor="end" height={100} style={{ fontSize: '12px' }} />
-                <YAxis label={{ value: 'Litres', angle: -90, position: 'insideLeft' }} />
-                <Tooltip />
-                <Bar dataKey="litres" radius={[8, 8, 0, 0]}>
+                <YAxis 
+                  label={{ value: 'Taux de remplissage (%)', angle: -90, position: 'insideLeft' }} 
+                  domain={[0, 100]}
+                />
+                <Tooltip 
+                  content={({ payload }) => {
+                    if (payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                          <p className="font-bold text-gray-900">{data.nom}</p>
+                          <p className="text-sm text-gray-600">
+                            <span className="font-semibold">{data.pourcentage}%</span> de remplissage
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {data.litres}L / {data.quantite_min}L souhaités
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar dataKey="pourcentage" radius={[8, 8, 0, 0]}>
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+            
+            {/* Légende des couleurs */}
+            <div className="flex justify-center space-x-4 mt-4 text-xs">
+              <div className="flex items-center space-x-1">
+                <div className="w-4 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div>
+                <span>0-25% (Critique)</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-4 h-4 rounded" style={{ backgroundColor: '#f59e0b' }}></div>
+                <span>26-50% (Faible)</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-4 h-4 rounded" style={{ backgroundColor: '#fbbf24' }}></div>
+                <span>51-75% (Moyen)</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-4 h-4 rounded" style={{ backgroundColor: '#10b981' }}></div>
+                <span>76-100% (Bon)</span>
+              </div>
+            </div>
           </div>
         )}
 
@@ -143,14 +201,17 @@ const Huiles = () => {
 
         {/* Liquides List */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="liquides-list">
-          {filteredLiquides.map((liquide) => {
-            const statusColor = getBarColor(liquide);
-            return (
-              <div
-                key={liquide.id}
-                className="glass rounded-2xl overflow-hidden shadow-md hover-lift"
-                data-testid={`liquide-card-${liquide.id}`}
-              >
+          {filteredLiquides
+            .sort((a, b) => calculatePercentage(b) - calculatePercentage(a)) // Tri par pourcentage décroissant
+            .map((liquide) => {
+              const pourcentage = calculatePercentage(liquide);
+              const statusColor = getBarColor(pourcentage);
+              return (
+                <div
+                  key={liquide.id}
+                  className="glass rounded-2xl overflow-hidden shadow-md hover-lift"
+                  data-testid={`liquide-card-${liquide.id}`}
+                >
                 <div className="relative aspect-video bg-gradient-to-br from-blue-100 to-blue-200">
                   {liquide.photos && liquide.photos.length > 0 ? (
                     <LazyLoadImage
@@ -182,15 +243,37 @@ const Huiles = () => {
 
                   <div className="bg-gray-50 rounded-lg p-3 mb-3">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-2xl font-bold" style={{ color: statusColor }}>
-                        {liquide.litres || 0}L
-                      </span>
-                      <span className="text-xs" style={{ color: statusColor }}>
-                        {getStatusText(liquide)}
+                      <div>
+                        <span className="text-3xl font-bold" style={{ color: statusColor }}>
+                          {pourcentage}%
+                        </span>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {liquide.litres || 0}L / {liquide.quantite_min || 0}L
+                        </p>
+                      </div>
+                      <span className="text-xs font-semibold px-2 py-1 rounded" style={{ 
+                        backgroundColor: statusColor + '20', 
+                        color: statusColor 
+                      }}>
+                        {getStatusText(pourcentage)}
                       </span>
                     </div>
-                    {liquide.quantite_min && (
-                      <p className="text-xs text-gray-500">Min souhaité: {liquide.quantite_min}L</p>
+                    
+                    {/* Barre de progression */}
+                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <div 
+                        className="h-full transition-all duration-500" 
+                        style={{ 
+                          width: `${Math.min(pourcentage, 100)}%`,
+                          backgroundColor: statusColor
+                        }}
+                      ></div>
+                    </div>
+                    
+                    {liquide.usage_hebdo && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        Usage: {liquide.usage_hebdo}L/semaine (~{(liquide.usage_hebdo * 4).toFixed(1)}L/mois)
+                      </p>
                     )}
                   </div>
 
