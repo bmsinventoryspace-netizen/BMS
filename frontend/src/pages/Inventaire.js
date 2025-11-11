@@ -32,6 +32,9 @@ const Inventaire = () => {
   const [sousCategories, setSousCategories] = useState([]);
   const [formData, setFormData] = useState(getEmptyFormData());
   const [photos, setPhotos] = useState([]);
+  const [newSousCategorie, setNewSousCategorie] = useState('');
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   const etats = ['Comme neuf', 'Très bon état', 'Bon état', 'État acceptable', 'Usé', 'Mauvais état', 'Très mauvais état'];
 
@@ -43,7 +46,7 @@ const Inventaire = () => {
       description: '',
       etat: '',
       categorie: '',
-      sous_categorie: '',
+      sous_categories: [], // Tableau au lieu d'une seule
       lieu: '',
       date_obtention: '',
       prix_neuf: '',
@@ -158,6 +161,8 @@ const Inventaire = () => {
       const dataToSend = {
         ...formData,
         photos: photos,
+        // Convertir le tableau de sous-catégories en string pour le backend
+        sous_categorie: formData.sous_categories.length > 0 ? formData.sous_categories.join(', ') : null,
         prix_neuf: formData.prix_neuf ? parseFloat(formData.prix_neuf) : null,
         prix_achat: formData.prix_achat ? parseFloat(formData.prix_achat) : null,
         prix_vente: formData.prix_vente ? parseFloat(formData.prix_vente) : null,
@@ -166,6 +171,8 @@ const Inventaire = () => {
         quantite_min: formData.quantite_min ? parseFloat(formData.quantite_min) : null,
         usage_hebdo: formData.usage_hebdo ? parseFloat(formData.usage_hebdo) : null,
       };
+      // Supprimer sous_categories du dataToSend car on a déjà sous_categorie
+      delete dataToSend.sous_categories;
 
       if (selectedArticle) {
         await axios.put(`${API}/articles/${selectedArticle.id}`, dataToSend);
@@ -200,10 +207,49 @@ const Inventaire = () => {
 
   const handleEdit = (article) => {
     setSelectedArticle(article);
-    setFormData({ ...article });
+    // Convertir sous_categorie string en array si nécessaire
+    const sousCategories = article.sous_categorie 
+      ? (Array.isArray(article.sous_categorie) ? article.sous_categorie : [article.sous_categorie])
+      : [];
+    setFormData({ ...article, sous_categories: sousCategories });
     setPhotos(article.photos || []);
     setArticleType(article.type);
     setShowAddDialog(true);
+  };
+
+  const addSousCategorie = () => {
+    if (newSousCategorie.trim() && !formData.sous_categories.includes(newSousCategorie.trim())) {
+      setFormData({
+        ...formData,
+        sous_categories: [...formData.sous_categories, newSousCategorie.trim()]
+      });
+      setNewSousCategorie('');
+    }
+  };
+
+  const removeSousCategorie = (index) => {
+    setFormData({
+      ...formData,
+      sous_categories: formData.sous_categories.filter((_, i) => i !== index)
+    });
+  };
+
+  const handleCategoryChange = (value) => {
+    if (value === '__new__') {
+      setShowNewCategoryInput(true);
+      setNewCategoryName('');
+    } else {
+      setFormData({ ...formData, categorie: value });
+      setShowNewCategoryInput(false);
+    }
+  };
+
+  const handleNewCategoryConfirm = () => {
+    if (newCategoryName.trim()) {
+      setFormData({ ...formData, categorie: newCategoryName.trim() });
+      setShowNewCategoryInput(false);
+      setNewCategoryName('');
+    }
   };
 
   const handleExport = async () => {
@@ -458,26 +504,98 @@ const Inventaire = () => {
                     </>
                   )}
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-4">
                     <div>
                       <Label>Catégorie</Label>
-                      <Input
-                        value={formData.categorie}
-                        onChange={(e) => setFormData({ ...formData, categorie: e.target.value })}
-                        list="categories"
-                        data-testid="categorie-input"
-                      />
-                      <datalist id="categories">
-                        {categories.map(cat => <option key={cat} value={cat} />)}
-                      </datalist>
+                      {!showNewCategoryInput ? (
+                        <Select 
+                          value={formData.categorie} 
+                          onValueChange={handleCategoryChange}
+                          data-testid="categorie-select"
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une catégorie" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map(cat => (
+                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                            ))}
+                            <SelectItem value="__new__" className="text-blue-600 font-semibold">
+                              + Nouvelle catégorie
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <div className="flex space-x-2">
+                          <Input
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            placeholder="Nom de la nouvelle catégorie"
+                            onKeyPress={(e) => e.key === 'Enter' && handleNewCategoryConfirm()}
+                            autoFocus
+                          />
+                          <Button type="button" size="sm" onClick={handleNewCategoryConfirm}>
+                            ✓
+                          </Button>
+                          <Button 
+                            type="button" 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => setShowNewCategoryInput(false)}
+                          >
+                            ✕
+                          </Button>
+                        </div>
+                      )}
                     </div>
+                    
                     <div>
-                      <Label>Sous-catégorie</Label>
-                      <Input
-                        value={formData.sous_categorie}
-                        onChange={(e) => setFormData({ ...formData, sous_categorie: e.target.value })}
-                        data-testid="sous-categorie-input"
-                      />
+                      <Label>Sous-catégories</Label>
+                      <div className="space-y-2">
+                        {formData.sous_categories.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            {formData.sous_categories.map((sc, index) => (
+                              <div 
+                                key={index} 
+                                className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center space-x-2 text-sm"
+                              >
+                                <span>{sc}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeSousCategorie(index)}
+                                  className="text-blue-600 hover:text-blue-800 font-bold"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex space-x-2">
+                          <Input
+                            value={newSousCategorie}
+                            onChange={(e) => setNewSousCategorie(e.target.value)}
+                            placeholder="Ajouter une sous-catégorie"
+                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSousCategorie())}
+                            list="sous-categories-list"
+                            data-testid="sous-categorie-input"
+                          />
+                          <Button 
+                            type="button" 
+                            onClick={addSousCategorie}
+                            disabled={!newSousCategorie.trim()}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <datalist id="sous-categories-list">
+                          {sousCategories.map(sc => <option key={sc} value={sc} />)}
+                        </datalist>
+                        <p className="text-xs text-gray-500">
+                          Appuyez sur Entrée ou cliquez sur + pour ajouter
+                        </p>
+                      </div>
                     </div>
                   </div>
 
@@ -591,6 +709,20 @@ const Inventaire = () => {
                 <h3 className="font-bold text-gray-900 mb-1 truncate">{article.nom}</h3>
                 <p className="text-sm text-gray-600 mb-1">Réf: {article.ref || 'N/A'}</p>
                 <p className="text-xs text-gray-500 mb-2">SKU: {article.sku}</p>
+                {article.categorie && (
+                  <p className="text-xs text-gray-600 mb-1">
+                    <span className="font-semibold">Cat:</span> {article.categorie}
+                  </p>
+                )}
+                {article.sous_categorie && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {article.sous_categorie.split(', ').map((sc, idx) => (
+                      <span key={idx} className="inline-block px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">
+                        {sc}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 {article.type === 'piece' && article.etat && (
                   <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full mb-2">
                     {article.etat}
