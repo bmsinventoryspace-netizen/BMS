@@ -248,6 +248,7 @@ const Inventaire = () => {
     if (newCategoryName.trim()) {
       setFormData({ ...formData, categorie: newCategoryName.trim() });
       setShowNewCategoryInput(false);
+      toast.success(`Catégorie "${newCategoryName.trim()}" créée !`);
       setNewCategoryName('');
     }
   };
@@ -656,19 +657,82 @@ const Inventaire = () => {
           </div>
         </div>
 
-        {/* Search */}
+        {/* Search & Filters */}
         <div className="glass rounded-2xl p-4 shadow-md">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <Input
-              type="text"
-              placeholder="Rechercher par nom, référence, SKU ou ID..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 border-blue-200 focus:border-blue-400"
-              data-testid="search-input"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="relative md:col-span-2">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Input
+                type="text"
+                placeholder="Rechercher par nom, référence, SKU ou ID..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 border-blue-200 focus:border-blue-400"
+                data-testid="search-input"
+              />
+            </div>
+            
+            <Select value={selectedCategory} onValueChange={setSelectedCategory} data-testid="filter-category">
+              <SelectTrigger className="border-blue-200">
+                <SelectValue placeholder="Toutes les catégories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes les catégories</SelectItem>
+                {categories.map(cat => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedEtat} onValueChange={setSelectedEtat} data-testid="filter-etat">
+              <SelectTrigger className="border-blue-200">
+                <SelectValue placeholder="Tous les états" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les états</SelectItem>
+                {etats.map(etat => (
+                  <SelectItem key={etat} value={etat}>{etat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+          
+          {(selectedCategory !== 'all' || selectedEtat !== 'all') && (
+            <div className="mt-3 flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Filtres actifs :</span>
+              {selectedCategory !== 'all' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectedCategory('all')}
+                  className="h-7 px-2 text-xs"
+                >
+                  {selectedCategory} ×
+                </Button>
+              )}
+              {selectedEtat !== 'all' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectedEtat('all')}
+                  className="h-7 px-2 text-xs"
+                >
+                  {selectedEtat} ×
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setSelectedCategory('all');
+                  setSelectedEtat('all');
+                }}
+                className="h-7 px-2 text-xs text-blue-600"
+              >
+                Réinitialiser tout
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Articles List */}
