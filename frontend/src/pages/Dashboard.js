@@ -62,7 +62,13 @@ const Dashboard = () => {
   const fetchPostits = async () => {
     try {
       const response = await axios.get(`${API}/postits`);
-      setPostits(response.data);
+      // Inverser l'ordre : le plus ancien en premier (index 0), le plus récent en dernier
+      const sortedPostits = response.data.reverse();
+      setPostits(sortedPostits);
+      // Si on était sur un post-it qui n'existe plus, revenir au dernier
+      if (currentPostitIndex >= sortedPostits.length && sortedPostits.length > 0) {
+        setCurrentPostitIndex(sortedPostits.length - 1);
+      }
     } catch (error) {
       console.error('Error fetching postits:', error);
     }
