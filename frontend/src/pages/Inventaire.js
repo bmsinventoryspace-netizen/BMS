@@ -25,6 +25,7 @@ const Inventaire = () => {
   const [selectedSousCategory, setSelectedSousCategory] = useState('all');
   const [selectedEtat, setSelectedEtat] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
+  const [selectedSousCategoryFilter, setSelectedSousCategoryFilter] = useState('all');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [articleType, setArticleType] = useState('piece');
@@ -71,7 +72,7 @@ const Inventaire = () => {
 
   useEffect(() => {
     filterArticles();
-  }, [articles, searchTerm, selectedCategory, selectedSousCategory, selectedEtat, selectedType]);
+  }, [articles, searchTerm, selectedCategory, selectedSousCategory, selectedEtat, selectedType, selectedSousCategoryFilter]);
 
   const fetchArticles = async () => {
     try {
@@ -123,6 +124,13 @@ const Inventaire = () => {
     // Type filter
     if (selectedType !== 'all') {
       filtered = filtered.filter(article => article.type === selectedType);
+    }
+
+    // Sous-category filter
+    if (selectedSousCategoryFilter !== 'all') {
+      filtered = filtered.filter(article => 
+        article.sous_categorie && article.sous_categorie.includes(selectedSousCategoryFilter)
+      );
     }
 
     setFilteredArticles(filtered);
@@ -659,8 +667,8 @@ const Inventaire = () => {
 
         {/* Search & Filters */}
         <div className="glass rounded-2xl p-4 shadow-md">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative md:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="relative lg:col-span-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <Input
                 type="text"
@@ -674,7 +682,7 @@ const Inventaire = () => {
             
             <Select value={selectedCategory} onValueChange={setSelectedCategory} data-testid="filter-category">
               <SelectTrigger className="border-blue-200">
-                <SelectValue placeholder="Toutes les catégories" />
+                <SelectValue placeholder="Catégorie" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Toutes les catégories</SelectItem>
@@ -686,7 +694,7 @@ const Inventaire = () => {
 
             <Select value={selectedEtat} onValueChange={setSelectedEtat} data-testid="filter-etat">
               <SelectTrigger className="border-blue-200">
-                <SelectValue placeholder="Tous les états" />
+                <SelectValue placeholder="État" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous les états</SelectItem>
@@ -696,9 +704,34 @@ const Inventaire = () => {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <Select value={selectedSousCategoryFilter} onValueChange={setSelectedSousCategoryFilter} data-testid="filter-sous-category">
+              <SelectTrigger className="border-blue-200">
+                <SelectValue placeholder="Sous-catégorie" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes les sous-catégories</SelectItem>
+                {sousCategories.map(sc => (
+                  <SelectItem key={sc} value={sc}>{sc}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedType} onValueChange={setSelectedType} data-testid="filter-type">
+              <SelectTrigger className="border-blue-200">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les types</SelectItem>
+                <SelectItem value="piece">Pièce</SelectItem>
+                <SelectItem value="liquide">Liquide</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           
-          {(selectedCategory !== 'all' || selectedEtat !== 'all') && (
-            <div className="mt-3 flex items-center space-x-2">
+          {(selectedCategory !== 'all' || selectedEtat !== 'all' || selectedSousCategoryFilter !== 'all' || selectedType !== 'all') && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               <span className="text-sm text-gray-600">Filtres actifs :</span>
               {selectedCategory !== 'all' && (
                 <Button
@@ -707,7 +740,17 @@ const Inventaire = () => {
                   onClick={() => setSelectedCategory('all')}
                   className="h-7 px-2 text-xs"
                 >
-                  {selectedCategory} ×
+                  Cat: {selectedCategory} ×
+                </Button>
+              )}
+              {selectedSousCategoryFilter !== 'all' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectedSousCategoryFilter('all')}
+                  className="h-7 px-2 text-xs"
+                >
+                  Sous-cat: {selectedSousCategoryFilter} ×
                 </Button>
               )}
               {selectedEtat !== 'all' && (
@@ -717,7 +760,17 @@ const Inventaire = () => {
                   onClick={() => setSelectedEtat('all')}
                   className="h-7 px-2 text-xs"
                 >
-                  {selectedEtat} ×
+                  État: {selectedEtat} ×
+                </Button>
+              )}
+              {selectedType !== 'all' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectedType('all')}
+                  className="h-7 px-2 text-xs"
+                >
+                  Type: {selectedType === 'piece' ? 'Pièce' : 'Liquide'} ×
                 </Button>
               )}
               <Button
@@ -725,7 +778,9 @@ const Inventaire = () => {
                 variant="ghost"
                 onClick={() => {
                   setSelectedCategory('all');
+                  setSelectedSousCategoryFilter('all');
                   setSelectedEtat('all');
+                  setSelectedType('all');
                 }}
                 className="h-7 px-2 text-xs text-blue-600"
               >
