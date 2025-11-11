@@ -87,7 +87,23 @@ const Inventaire = () => {
     try {
       const response = await axios.get(`${API}/categories`);
       setCategories(response.data.categories || []);
-      setSousCategories(response.data.sous_categories || []);
+      
+      // Séparer les sous-catégories qui sont stockées comme "cat1, cat2, cat3"
+      const allSousCategories = response.data.sous_categories || [];
+      const separatedSousCategories = [];
+      allSousCategories.forEach(sc => {
+        // Si la sous-catégorie contient des virgules, la séparer
+        if (sc.includes(', ')) {
+          const split = sc.split(', ').map(s => s.trim()).filter(s => s);
+          separatedSousCategories.push(...split);
+        } else {
+          separatedSousCategories.push(sc);
+        }
+      });
+      
+      // Supprimer les doublons et trier
+      const uniqueSousCategories = [...new Set(separatedSousCategories)].sort();
+      setSousCategories(uniqueSousCategories);
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
@@ -216,9 +232,15 @@ const Inventaire = () => {
   const handleEdit = (article) => {
     setSelectedArticle(article);
     // Convertir sous_categorie string en array si nécessaire
-    const sousCategories = article.sous_categorie 
-      ? (Array.isArray(article.sous_categorie) ? article.sous_categorie : [article.sous_categorie])
-      : [];
+    let sousCategories = [];
+    if (article.sous_categorie) {
+      if (Array.isArray(article.sous_categorie)) {
+        sousCategories = article.sous_categorie;
+      } else if (typeof article.sous_categorie === 'string') {
+        // Séparer par virgule si c'est une string
+        sousCategories = article.sous_categorie.split(', ').map(s => s.trim()).filter(s => s);
+      }
+    }
     setFormData({ ...article, sous_categories: sousCategories });
     setPhotos(article.photos || []);
     setArticleType(article.type);
