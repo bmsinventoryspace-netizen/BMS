@@ -543,6 +543,25 @@ async def check_postit(postit_id: str, user_data: dict = Depends(verify_token)):
     
     return {'message': 'Check added'}
 
+@api_router.delete("/postits/{postit_id}")
+async def delete_postit(postit_id: str, user_data: dict = Depends(verify_token)):
+    postit = await db.postits.find_one({'id': postit_id})
+    if not postit:
+        raise HTTPException(status_code=404, detail='Post-it not found')
+    
+    # Vérifier que l'utilisateur est soit admin, soit le créateur du post-it
+    if user_data['role'] != 'admin' and postit['posted_by'] != user_data['username']:
+        raise HTTPException(status_code=403, detail='Unauthorized')
+    
+    await db.postits.delete_one({'id': postit_id})
+    
+    await broadcast_notification({
+        'type': 'postit_deleted',
+        'data': {'id': postit_id, 'by': user_data['username']}
+    })
+    
+    return {'message': 'Post-it deleted'}
+
 # Agenda
 @api_router.get("/agenda", response_model=List[AgendaEvent])
 async def get_agenda_events(user_data: dict = Depends(verify_token)):

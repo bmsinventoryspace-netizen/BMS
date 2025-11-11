@@ -3,7 +3,7 @@ import axios from 'axios';
 import { AuthContext } from '../App';
 import Layout from '../components/Layout';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Plus, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Check, Trash2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
 import { Input } from '../components/ui/input';
@@ -34,7 +34,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (socket) {
       socket.on('message', (data) => {
-        if (data.type === 'postit_created' || data.type === 'postit_checked') {
+        if (data.type === 'postit_created' || data.type === 'postit_checked' || data.type === 'postit_deleted') {
           fetchPostits();
         }
       });
@@ -147,6 +147,23 @@ const Dashboard = () => {
     }
   };
 
+  const handlePostitDelete = async (postitId) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce post-it ?')) return;
+    
+    try {
+      await axios.delete(`${API}/postits/${postitId}`);
+      toast.success('Post-it supprimé');
+      // Ajuster l'index si nécessaire
+      if (currentPostitIndex >= postits.length - 1 && currentPostitIndex > 0) {
+        setCurrentPostitIndex(currentPostitIndex - 1);
+      }
+      fetchPostits();
+    } catch (error) {
+      toast.error('Erreur lors de la suppression');
+      console.error('Error deleting postit:', error);
+    }
+  };
+
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -241,8 +258,15 @@ const Dashboard = () => {
               </div>
             ) : currentPostit ? (
               <div className="space-y-3" data-testid="postit-display">
-                <div className="bg-yellow-100 p-4 rounded-xl shadow-sm">
-                  <h3 className="font-bold text-gray-900 mb-2">{currentPostit.objet}</h3>
+                <div className="bg-yellow-100 p-4 rounded-xl shadow-sm relative">
+                  <button
+                    onClick={() => handlePostitDelete(currentPostit.id)}
+                    className="absolute top-2 right-2 p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                    title="Supprimer"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <h3 className="font-bold text-gray-900 mb-2 pr-8">{currentPostit.objet}</h3>
                   <p className="text-gray-700 text-sm mb-3">{currentPostit.message}</p>
                   {currentPostit.photo && (
                     <LazyLoadImage
@@ -276,8 +300,8 @@ const Dashboard = () => {
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => setCurrentPostitIndex(Math.max(0, currentPostitIndex - 1))}
-                    disabled={currentPostitIndex === 0}
+                    onClick={() => setCurrentPostitIndex(Math.min(postits.length - 1, currentPostitIndex + 1))}
+                    disabled={currentPostitIndex === postits.length - 1}
                     data-testid="postit-prev-button"
                   >
                     <ChevronLeft className="w-4 h-4" />
@@ -288,8 +312,8 @@ const Dashboard = () => {
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => setCurrentPostitIndex(Math.min(postits.length - 1, currentPostitIndex + 1))}
-                    disabled={currentPostitIndex === postits.length - 1}
+                    onClick={() => setCurrentPostitIndex(Math.max(0, currentPostitIndex - 1))}
+                    disabled={currentPostitIndex === 0}
                     data-testid="postit-next-button"
                   >
                     <ChevronRight className="w-4 h-4" />
