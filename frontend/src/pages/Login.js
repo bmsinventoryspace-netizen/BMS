@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../App';
+import { Logo } from '../hooks/useLogo';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
@@ -34,8 +35,8 @@ const Login = () => {
       <div className="max-w-md w-full">
         <div className="glass bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl p-8">
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <span className="text-white font-bold text-3xl">B</span>
+            <div className="mx-auto mb-4 flex justify-center">
+              <Logo size="lg" className="rounded-2xl" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">BMS Inventory</h1>
             <p className="text-gray-600">Connexion à votre compte</p>

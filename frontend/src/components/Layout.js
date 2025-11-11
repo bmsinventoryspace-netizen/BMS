@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../App';
+import { Logo } from '../hooks/useLogo';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -52,6 +53,7 @@ const Layout = ({ children }) => {
     { path: '/admin/pubs', label: 'Pubs & Offres', icon: MessageSquare },
     { path: '/admin/numeros', label: 'Numéros', icon: Phone },
     { path: '/admin/employes', label: 'Employés', icon: Users },
+    { path: '/admin/logo', label: 'Logo', icon: Settings },
   ];
 
   return (
@@ -62,9 +64,7 @@ const Layout = ({ children }) => {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/dashboard" className="flex items-center space-x-3" data-testid="logo-link">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-xl">B</span>
-              </div>
+              <Logo size="sm" />
               <span className="text-xl font-bold text-blue-900">BMS Inventory</span>
             </Link>
 
