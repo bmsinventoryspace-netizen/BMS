@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import axios from 'axios';
+import ServerWakeup from './components/ServerWakeup';
 import './App.css';
 import CataloguePublic from './pages/CataloguePublic';
 import Login from './pages/Login';
@@ -28,16 +29,17 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [socket, setSocket] = useState(null);
+  const [serverReady, setServerReady] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
+    if (token && serverReady) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       fetchCurrentUser();
-    } else {
+    } else if (!token) {
       setLoading(false);
     }
-  }, []);
+  }, [serverReady]);
 
   useEffect(() => {
     if (user) {
@@ -79,6 +81,12 @@ function App() {
     delete axios.defaults.headers.common['Authorization'];
     setUser(null);
   };
+
+  // Afficher le ServerWakeup uniquement pour les routes authentifiées
+  const token = localStorage.getItem('token');
+  if (token && !serverReady) {
+    return <ServerWakeup onReady={() => setServerReady(true)} />;
+  }
 
   if (loading) {
     return (
