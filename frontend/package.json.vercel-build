@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "vercel-build": "yarn build"
+  }
+}
+
