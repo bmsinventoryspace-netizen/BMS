@@ -360,7 +360,7 @@ const Inventaire = () => {
                   Ajouter un article
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="article-dialog">
+              <DialogContent className="max-w-full sm:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6" data-testid="article-dialog">
                 <DialogHeader>
                   <DialogTitle>{selectedArticle ? 'Modifier l\'article' : 'Nouvel article'}</DialogTitle>
                 </DialogHeader>
@@ -406,7 +406,7 @@ const Inventaire = () => {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label>Nom *</Label>
                       <div className="flex space-x-2">
@@ -416,7 +416,7 @@ const Inventaire = () => {
                           required
                           data-testid="nom-input"
                         />
-                        <Button type="button" size="icon" variant="outline" onClick={openReferenceSearch}>
+                        <Button type="button" size="icon" variant="outline" onClick={openReferenceSearch} className="shrink-0">
                           <ExternalLink className="w-4 h-4" />
                         </Button>
                       </div>
@@ -456,7 +456,7 @@ const Inventaire = () => {
                         </Select>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <Label>Quantité</Label>
                           <Input
@@ -480,7 +480,7 @@ const Inventaire = () => {
 
                   {articleType === 'liquide' && (
                     <>
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                           <Label>Litres actuels</Label>
                           <Input
@@ -492,7 +492,7 @@ const Inventaire = () => {
                           />
                         </div>
                         <div>
-                          <Label>Quantité min souhaitée</Label>
+                          <Label className="text-xs sm:text-sm">Quantité min souhaitée</Label>
                           <Input
                             type="number"
                             step="0.1"
@@ -513,7 +513,7 @@ const Inventaire = () => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                           <Label>Marque</Label>
                           <Input
@@ -661,7 +661,7 @@ const Inventaire = () => {
                   </div>
 
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label>Prix neuf (€)</Label>
                         <Input
@@ -695,7 +695,7 @@ const Inventaire = () => {
                         </Label>
                         
                         {/* Boutons remises rapides */}
-                        <div className="flex flex-wrap gap-2">
+                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                           {quickRemises.map(percent => (
                             <Button
                               key={percent}
@@ -703,7 +703,7 @@ const Inventaire = () => {
                               size="sm"
                               variant={remisePercentage === percent.toString() ? 'default' : 'outline'}
                               onClick={() => applyRemise(percent.toString())}
-                              className="flex-1 min-w-[60px]"
+                              className="w-full"
                             >
                               -{percent}%
                             </Button>
@@ -788,11 +788,11 @@ const Inventaire = () => {
                     <Label htmlFor="public">Afficher sur le catalogue public</Label>
                   </div>
 
-                  <div className="flex space-x-3 pt-4">
-                    <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700" data-testid="submit-article-button">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+                    <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 py-6 sm:py-3" data-testid="submit-article-button">
                       {selectedArticle ? 'Modifier' : 'Créer'}
                     </Button>
-                    <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddDialog(false)}>
+                    <Button type="button" variant="outline" className="w-full py-6 sm:py-3" onClick={() => setShowAddDialog(false)}>
                       Annuler
                     </Button>
                   </div>
@@ -1030,7 +1030,7 @@ const Inventaire = () => {
 
       {/* Modal de visualisation d'article */}
       <Dialog open={!!selectedArticleView} onOpenChange={() => setSelectedArticleView(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-full sm:max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           {selectedArticleView && (
             <>
               <DialogHeader>
@@ -1201,13 +1201,13 @@ const Inventaire = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex space-x-3 pt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
                   <Button
                     onClick={() => {
                       setSelectedArticleView(null);
                       handleEdit(selectedArticleView);
                     }}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    className="w-full bg-blue-600 hover:bg-blue-700 py-6 sm:py-3"
                   >
                     <Edit className="w-4 h-4 mr-2" />
                     Modifier
@@ -1215,7 +1215,7 @@ const Inventaire = () => {
                   <Button
                     variant="outline"
                     onClick={() => setSelectedArticleView(null)}
-                    className="flex-1"
+                    className="w-full py-6 sm:py-3"
                   >
                     Fermer
                   </Button>
