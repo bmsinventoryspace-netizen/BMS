@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Zap } from 'lucide-react';
+import { Button } from './ui/button';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -8,6 +9,8 @@ const ServerWakeup = ({ onReady }) => {
   const [isWaking, setIsWaking] = useState(true);
   const [countdown, setCountdown] = useState(60);
   const [dots, setDots] = useState('');
+  const [isChecking, setIsChecking] = useState(true);
+  const [attempts, setAttempts] = useState(0);
 
   useEffect(() => {
     // Animation des points
@@ -28,21 +31,39 @@ const ServerWakeup = ({ onReady }) => {
     }
   }, [isWaking, countdown]);
 
-  useEffect(() => {
-    // Vérifier si le serveur est prêt
-    const checkServer = async () => {
-      try {
-        await axios.get(`${BACKEND_URL}/api/settings`, { timeout: 5000 });
-        setIsWaking(false);
-        if (onReady) onReady();
-      } catch (error) {
-        // Réessayer après 3 secondes
+  const checkServer = async () => {
+    try {
+      setIsChecking(true);
+      setAttempts(prev => prev + 1);
+      
+      // Faire plusieurs requêtes pour vraiment réveiller le serveur
+      await axios.get(`${BACKEND_URL}/api/settings`, { 
+        timeout: 10000 // 10 secondes de timeout
+      });
+      
+      // Double vérification
+      await axios.get(`${BACKEND_URL}/api/categories`, { timeout: 5000 });
+      
+      setIsWaking(false);
+      if (onReady) onReady();
+    } catch (error) {
+      setIsChecking(false);
+      // Réessayer automatiquement après 3 secondes si moins de 20 tentatives
+      if (attempts < 20) {
         setTimeout(checkServer, 3000);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     checkServer();
-  }, [onReady]);
+  }, []);
+
+  const handleManualWakeup = () => {
+    setCountdown(60); // Reset countdown
+    setAttempts(0);
+    checkServer();
+  };
 
   if (!isWaking) return null;
 
@@ -76,6 +97,28 @@ const ServerWakeup = ({ onReady }) => {
           <br />
           Premier démarrage : ~30-60 secondes
         </p>
+        
+        {/* Bouton de réveil manuel */}
+        {!isChecking && attempts > 3 && (
+          <div className="mt-6">
+            <Button
+              onClick={handleManualWakeup}
+              className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-lg border-2 border-white/30"
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              Réveiller le serveur maintenant
+            </Button>
+            <p className="text-xs text-blue-200 mt-2">
+              Le serveur met du temps ? Cliquez pour forcer le réveil
+            </p>
+          </div>
+        )}
+        
+        {attempts > 0 && (
+          <p className="text-xs text-blue-300 mt-2">
+            Tentative {attempts}/20
+          </p>
+        )}
       </div>
     </div>
   );
