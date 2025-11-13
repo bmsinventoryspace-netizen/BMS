@@ -36,6 +36,7 @@ const Inventaire = () => {
   const [newSousCategorie, setNewSousCategorie] = useState('');
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [selectedArticleView, setSelectedArticleView] = useState(null);
 
   const etats = ['Comme neuf', 'Très bon état', 'Bon état', 'État acceptable', 'Usé', 'Mauvais état', 'Très mauvais état'];
 
@@ -602,29 +603,43 @@ const Inventaire = () => {
                             ))}
                           </div>
                         )}
-                        <div className="flex space-x-2">
-                          <Input
-                            value={newSousCategorie}
-                            onChange={(e) => setNewSousCategorie(e.target.value)}
-                            placeholder="Ajouter une sous-catégorie"
-                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSousCategorie())}
-                            list="sous-categories-list"
-                            data-testid="sous-categorie-input"
-                          />
-                          <Button 
-                            type="button" 
-                            onClick={addSousCategorie}
-                            disabled={!newSousCategorie.trim()}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <datalist id="sous-categories-list">
-                          {sousCategories.map(sc => <option key={sc} value={sc} />)}
-                        </datalist>
+                        <Select 
+                          value="" 
+                          onValueChange={(value) => {
+                            if (value === '__new__') {
+                              // Permettre d'ajouter une nouvelle
+                              const newCat = prompt('Nom de la nouvelle sous-catégorie :');
+                              if (newCat && newCat.trim()) {
+                                if (!formData.sous_categories.includes(newCat.trim())) {
+                                  setFormData({
+                                    ...formData,
+                                    sous_categories: [...formData.sous_categories, newCat.trim()]
+                                  });
+                                  toast.success(`Sous-catégorie "${newCat.trim()}" créée !`);
+                                }
+                              }
+                            } else if (value && !formData.sous_categories.includes(value)) {
+                              setFormData({
+                                ...formData,
+                                sous_categories: [...formData.sous_categories, value]
+                              });
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Ajouter une sous-catégorie" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {sousCategories.map(sc => (
+                              <SelectItem key={sc} value={sc}>{sc}</SelectItem>
+                            ))}
+                            <SelectItem value="__new__" className="text-blue-600 font-semibold">
+                              + Nouvelle sous-catégorie
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                         <p className="text-xs text-gray-500">
-                          Appuyez sur Entrée ou cliquez sur + pour ajouter
+                          Sélectionnez une sous-catégorie existante ou créez-en une nouvelle
                         </p>
                       </div>
                     </div>
@@ -879,11 +894,18 @@ const Inventaire = () => {
                     size="sm"
                     variant="outline"
                     className="flex-1"
+                    onClick={() => setSelectedArticleView(article)}
+                    data-testid={`view-article-${article.id}`}
+                  >
+                    👁️ Voir
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => handleEdit(article)}
                     data-testid={`edit-article-${article.id}`}
                   >
-                    <Edit className="w-3 h-3 mr-1" />
-                    Modifier
+                    <Edit className="w-3 h-3" />
                   </Button>
                   <Button
                     size="sm"
@@ -905,6 +927,204 @@ const Inventaire = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de visualisation d'article */}
+      <Dialog open={!!selectedArticleView} onOpenChange={() => setSelectedArticleView(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedArticleView && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl text-blue-900">
+                  {selectedArticleView.nom}
+                  <span className="ml-3 text-sm text-gray-500">#{selectedArticleView.id}</span>
+                </DialogTitle>
+              </DialogHeader>
+              
+              <div className="space-y-6">
+                {/* Photos */}
+                {selectedArticleView.photos && selectedArticleView.photos.length > 0 && (
+                  <div className="grid grid-cols-2 gap-4">
+                    {selectedArticleView.photos.map((photo, idx) => (
+                      <img
+                        key={idx}
+                        src={photo}
+                        alt={`${selectedArticleView.nom} ${idx + 1}`}
+                        className="w-full rounded-xl object-cover aspect-square"
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Informations principales */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-blue-50 p-4 rounded-xl">
+                  <div>
+                    <p className="text-xs text-gray-600 mb-1">Type</p>
+                    <p className="font-semibold text-gray-900">
+                      {selectedArticleView.type === 'piece' ? '🔧 Pièce' : '🛢️ Liquide'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600 mb-1">Référence</p>
+                    <p className="font-semibold text-gray-900">{selectedArticleView.ref || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600 mb-1">SKU</p>
+                    <p className="font-semibold text-gray-900 font-mono text-sm">{selectedArticleView.sku}</p>
+                  </div>
+                  {selectedArticleView.categorie && (
+                    <div>
+                      <p className="text-xs text-gray-600 mb-1">Catégorie</p>
+                      <p className="font-semibold text-gray-900">{selectedArticleView.categorie}</p>
+                    </div>
+                  )}
+                  {selectedArticleView.sous_categorie && (
+                    <div className="md:col-span-2">
+                      <p className="text-xs text-gray-600 mb-1">Sous-catégories</p>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedArticleView.sous_categorie.split(', ').map((sc, idx) => (
+                          <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                            {sc}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {selectedArticleView.etat && (
+                    <div>
+                      <p className="text-xs text-gray-600 mb-1">État</p>
+                      <p className="font-semibold text-gray-900">{selectedArticleView.etat}</p>
+                    </div>
+                  )}
+                  {selectedArticleView.lieu && (
+                    <div>
+                      <p className="text-xs text-gray-600 mb-1">Lieu</p>
+                      <p className="font-semibold text-gray-900">{selectedArticleView.lieu}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Description */}
+                {selectedArticleView.description && (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-2">Description</p>
+                    <p className="text-gray-900 bg-gray-50 p-4 rounded-xl">{selectedArticleView.description}</p>
+                  </div>
+                )}
+
+                {/* Info spécifiques liquides */}
+                {selectedArticleView.type === 'liquide' && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-blue-50 p-4 rounded-xl">
+                    {selectedArticleView.marque && (
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Marque</p>
+                        <p className="font-semibold text-gray-900">{selectedArticleView.marque}</p>
+                      </div>
+                    )}
+                    {selectedArticleView.litres && (
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Quantité actuelle</p>
+                        <p className="font-semibold text-blue-600">{selectedArticleView.litres}L</p>
+                      </div>
+                    )}
+                    {selectedArticleView.quantite_min && (
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Quantité min</p>
+                        <p className="font-semibold text-gray-900">{selectedArticleView.quantite_min}L</p>
+                      </div>
+                    )}
+                    {selectedArticleView.usage_hebdo && (
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Usage hebdo</p>
+                        <p className="font-semibold text-gray-900">{selectedArticleView.usage_hebdo}L</p>
+                      </div>
+                    )}
+                    {selectedArticleView.viscosite && (
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Viscosité</p>
+                        <p className="font-semibold text-gray-900">{selectedArticleView.viscosite}</p>
+                      </div>
+                    )}
+                    {selectedArticleView.norme && (
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Norme</p>
+                        <p className="font-semibold text-gray-900">{selectedArticleView.norme}</p>
+                      </div>
+                    )}
+                    {selectedArticleView.usage && (
+                      <div className="md:col-span-2">
+                        <p className="text-xs text-gray-600 mb-1">Usage</p>
+                        <p className="font-semibold text-gray-900">{selectedArticleView.usage}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Info spécifiques pièces */}
+                {selectedArticleView.type === 'piece' && selectedArticleView.quantite && (
+                  <div className="bg-gray-50 p-4 rounded-xl">
+                    <p className="text-xs text-gray-600 mb-1">Quantité en stock</p>
+                    <p className="font-semibold text-gray-900 text-lg">{selectedArticleView.quantite} unité(s)</p>
+                  </div>
+                )}
+
+                {/* Prix */}
+                <div className="grid grid-cols-3 gap-4 bg-green-50 p-4 rounded-xl">
+                  {selectedArticleView.prix_neuf && (
+                    <div>
+                      <p className="text-xs text-gray-600 mb-1">Prix neuf</p>
+                      <p className="font-semibold text-gray-900">{selectedArticleView.prix_neuf}€</p>
+                    </div>
+                  )}
+                  {selectedArticleView.prix_achat && (
+                    <div>
+                      <p className="text-xs text-gray-600 mb-1">Prix achat</p>
+                      <p className="font-semibold text-gray-900">{selectedArticleView.prix_achat}€</p>
+                    </div>
+                  )}
+                  {selectedArticleView.prix_vente && (
+                    <div>
+                      <p className="text-xs text-gray-600 mb-1">Prix vente</p>
+                      <p className="font-semibold text-green-600 text-lg">{selectedArticleView.prix_vente}€</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Métadonnées */}
+                <div className="text-xs text-gray-500 pt-4 border-t space-y-1">
+                  <p>Posté par : <span className="font-semibold">{selectedArticleView.posted_by}</span></p>
+                  <p>Date : <span className="font-semibold">
+                    {new Date(selectedArticleView.date_post).toLocaleDateString('fr-FR')}
+                  </span></p>
+                  <p>Visibilité : <span className={`font-semibold ${selectedArticleView.public ? 'text-green-600' : 'text-gray-600'}`}>
+                    {selectedArticleView.public ? '✓ Public' : '✗ Privé'}
+                  </span></p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex space-x-3 pt-4">
+                  <Button
+                    onClick={() => {
+                      setSelectedArticleView(null);
+                      handleEdit(selectedArticleView);
+                    }}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Modifier
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setSelectedArticleView(null)}
+                    className="flex-1"
+                  >
+                    Fermer
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
