@@ -16,6 +16,7 @@ import AdminNumeros from './pages/admin/AdminNumeros';
 import AdminEmployes from './pages/admin/AdminEmployes';
 import AdminProfil from './pages/admin/AdminProfil';
 import AdminLogo from './pages/admin/AdminLogo';
+import CatalogueGestion from './pages/CatalogueGestion';
 import { Toaster } from './components/ui/sonner';
 import io from 'socket.io-client';
 
@@ -103,6 +104,7 @@ function App() {
           <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
           <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
           <Route path="/inventaire" element={user ? <Inventaire /> : <Navigate to="/login" />} />
+          <Route path="/catalogue-gestion" element={user ? <CatalogueGestion /> : <Navigate to="/login" />} />
           <Route path="/huiles" element={user ? <Huiles /> : <Navigate to="/login" />} />
           <Route path="/post-it" element={user ? <PostItPage /> : <Navigate to="/login" />} />
           <Route path="/agenda" element={user ? <AgendaPage /> : <Navigate to="/login" />} />

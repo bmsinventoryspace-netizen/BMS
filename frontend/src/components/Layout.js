@@ -25,6 +25,7 @@ import {
   LogOut,
   Menu,
   TrendingUp,
+  ShoppingCart,
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -43,6 +44,7 @@ const Layout = ({ children }) => {
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/inventaire', label: 'Inventaire', icon: Package },
+    { path: '/catalogue-gestion', label: 'Catalogue', icon: ShoppingCart },
     { path: '/huiles', label: 'Huiles & Liquides', icon: Droplet },
     { path: '/post-it', label: 'Post-it', icon: StickyNote },
     { path: '/agenda', label: 'Agenda', icon: Calendar },
