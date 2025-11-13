@@ -31,38 +31,63 @@ const ServerWakeup = ({ onReady }) => {
     }
   }, [isWaking, countdown]);
 
-  const checkServer = async () => {
+  useEffect(() => {
+    let isMounted = true;
+    
+    const checkServer = async () => {
+      try {
+        setIsChecking(true);
+        setAttempts(prev => prev + 1);
+        
+        // Faire plusieurs requêtes pour vraiment réveiller le serveur
+        await axios.get(`${BACKEND_URL}/api/settings`, { 
+          timeout: 10000 // 10 secondes de timeout
+        });
+        
+        // Double vérification
+        await axios.get(`${BACKEND_URL}/api/categories`, { timeout: 5000 });
+        
+        if (isMounted) {
+          setIsWaking(false);
+          if (onReady) {
+            setTimeout(() => onReady(), 500); // Petit délai pour la transition
+          }
+        }
+      } catch (error) {
+        if (isMounted) {
+          setIsChecking(false);
+          // Réessayer automatiquement après 3 secondes si moins de 20 tentatives
+          if (attempts < 20) {
+            setTimeout(checkServer, 3000);
+          }
+        }
+      }
+    };
+
+    checkServer();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [onReady, attempts]);
+
+  const handleManualWakeup = async () => {
+    setCountdown(60); // Reset countdown
+    setAttempts(0);
+    setIsChecking(true);
+    
     try {
-      setIsChecking(true);
-      setAttempts(prev => prev + 1);
-      
-      // Faire plusieurs requêtes pour vraiment réveiller le serveur
-      await axios.get(`${BACKEND_URL}/api/settings`, { 
-        timeout: 10000 // 10 secondes de timeout
-      });
-      
-      // Double vérification
+      await axios.get(`${BACKEND_URL}/api/settings`, { timeout: 10000 });
       await axios.get(`${BACKEND_URL}/api/categories`, { timeout: 5000 });
       
       setIsWaking(false);
-      if (onReady) onReady();
+      if (onReady) {
+        setTimeout(() => onReady(), 500);
+      }
     } catch (error) {
       setIsChecking(false);
-      // Réessayer automatiquement après 3 secondes si moins de 20 tentatives
-      if (attempts < 20) {
-        setTimeout(checkServer, 3000);
-      }
+      setTimeout(() => setAttempts(prev => prev + 1), 3000);
     }
-  };
-
-  useEffect(() => {
-    checkServer();
-  }, []);
-
-  const handleManualWakeup = () => {
-    setCountdown(60); // Reset countdown
-    setAttempts(0);
-    checkServer();
   };
 
   if (!isWaking) return null;
