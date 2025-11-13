@@ -33,33 +33,26 @@ const ServerWakeup = ({ onReady }) => {
 
   useEffect(() => {
     let isMounted = true;
+    let retryCount = 0;
     
     const checkServer = async () => {
       try {
         setIsChecking(true);
-        setAttempts(prev => prev + 1);
+        retryCount++;
+        setAttempts(retryCount);
         
-        // Faire plusieurs requêtes pour vraiment réveiller le serveur
-        await axios.get(`${BACKEND_URL}/api/settings`, { 
-          timeout: 10000 // 10 secondes de timeout
-        });
-        
-        // Double vérification
-        await axios.get(`${BACKEND_URL}/api/categories`, { timeout: 5000 });
+        // Une seule requête suffit
+        await axios.get(`${BACKEND_URL}/api/settings`, { timeout: 10000 });
         
         if (isMounted) {
           setIsWaking(false);
-          if (onReady) {
-            setTimeout(() => onReady(), 500); // Petit délai pour la transition
-          }
+          if (onReady) onReady();
         }
       } catch (error) {
-        if (isMounted) {
+        if (isMounted && retryCount < 20) {
           setIsChecking(false);
-          // Réessayer automatiquement après 3 secondes si moins de 20 tentatives
-          if (attempts < 20) {
-            setTimeout(checkServer, 3000);
-          }
+          // Réessayer après 3 secondes
+          setTimeout(checkServer, 3000);
         }
       }
     };
@@ -69,24 +62,18 @@ const ServerWakeup = ({ onReady }) => {
     return () => {
       isMounted = false;
     };
-  }, [onReady, attempts]);
+  }, [onReady]);
 
   const handleManualWakeup = async () => {
-    setCountdown(60); // Reset countdown
-    setAttempts(0);
     setIsChecking(true);
     
     try {
       await axios.get(`${BACKEND_URL}/api/settings`, { timeout: 10000 });
-      await axios.get(`${BACKEND_URL}/api/categories`, { timeout: 5000 });
-      
       setIsWaking(false);
-      if (onReady) {
-        setTimeout(() => onReady(), 500);
-      }
+      if (onReady) onReady();
     } catch (error) {
       setIsChecking(false);
-      setTimeout(() => setAttempts(prev => prev + 1), 3000);
+      alert('Le serveur ne répond toujours pas. Réessayez dans quelques secondes.');
     }
   };
 
