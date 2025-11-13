@@ -73,7 +73,7 @@ const AdminLogo = () => {
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900">Personnalisation du Logo</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">Personnalisation du Logo</h1>
           <p className="text-gray-600 mt-2">
             Téléchargez votre logo personnalisé pour remplacer le "B" par défaut
           </p>

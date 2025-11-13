@@ -114,7 +114,7 @@ const AgendaPage = () => {
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
               <CalendarIcon className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-4xl font-bold text-gray-900">Agenda</h1>
+            <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">Agenda</h1>
           </div>
           <Dialog open={showDialog} onOpenChange={setShowDialog}>
             <DialogTrigger asChild>

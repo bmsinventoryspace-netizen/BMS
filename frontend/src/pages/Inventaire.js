@@ -338,7 +338,7 @@ const Inventaire = () => {
     <Layout>
       <div className="space-y-6" data-testid="inventaire-page">
         <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-bold text-gray-900">Inventaire</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">Inventaire</h1>
           <div className="flex space-x-3">
             <Button
               onClick={handleExport}
@@ -360,7 +360,7 @@ const Inventaire = () => {
                   Ajouter un article
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-full sm:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6" data-testid="article-dialog">
+              <DialogContent className="w-[95vw] sm:max-w-3xl h-[85vh] sm:max-h-[90vh] overflow-y-auto p-3 sm:p-6" data-testid="article-dialog">
                 <DialogHeader>
                   <DialogTitle>{selectedArticle ? 'Modifier l\'article' : 'Nouvel article'}</DialogTitle>
                 </DialogHeader>
@@ -1030,7 +1030,7 @@ const Inventaire = () => {
 
       {/* Modal de visualisation d'article */}
       <Dialog open={!!selectedArticleView} onOpenChange={() => setSelectedArticleView(null)}>
-        <DialogContent className="max-w-full sm:max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-[95vw] sm:max-w-4xl h-[85vh] sm:max-h-[90vh] overflow-y-auto p-3 sm:p-6">
           {selectedArticleView && (
             <>
               <DialogHeader>

@@ -85,7 +85,7 @@ const PostItPage = () => {
     <Layout>
       <div className="space-y-6 max-w-4xl mx-auto" data-testid="postit-page">
         <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-bold text-gray-900">Post-it Équipe</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">Post-it Équipe</h1>
           <Button
             onClick={() => setShowForm(!showForm)}
             className="bg-blue-600 hover:bg-blue-700"

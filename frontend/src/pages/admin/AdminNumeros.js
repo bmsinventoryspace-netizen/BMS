@@ -47,7 +47,7 @@ const AdminNumeros = () => {
           <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
             <Phone className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900">Gestion des numéros</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">Gestion des numéros</h1>
         </div>
 
         <div className="glass rounded-2xl p-8 shadow-md">

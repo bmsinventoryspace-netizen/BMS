@@ -91,7 +91,7 @@ const AdminPubs = () => {
             <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
               <MessageSquare className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-4xl font-bold text-gray-900">Pubs & Offres</h1>
+            <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">Pubs & Offres</h1>
           </div>
           <Dialog open={showDialog} onOpenChange={setShowDialog}>
             <DialogTrigger asChild>

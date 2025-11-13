@@ -93,7 +93,7 @@ const CatalogueGestion = () => {
               <ShoppingCart className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-gray-900">Gestion Catalogue Public</h1>
+              <h1 className="text-xl sm:text-4xl font-bold text-gray-900">Gestion Catalogue Public</h1>
               <p className="text-sm text-gray-600">{articles.length} article(s) en vente</p>
             </div>
           </div>
