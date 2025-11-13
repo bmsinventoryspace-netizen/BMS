@@ -1,0 +1,63 @@
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║     🚀 LANCER LE SEED - COMMANDES À COPIER-COLLER           ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+
+ÉTAPE 1 : Aller dans le dossier backend
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+cd "C:\Users\Mrski\Desktop\IRON BMS\projet_emergent_complet\backend"
+
+
+ÉTAPE 2 : Vérifier que Python fonctionne
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+python --version
+
+✅ Vous devriez voir : Python 3.12.x
+
+
+ÉTAPE 3 : Installer les dépendances Python
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+pip install motor python-dotenv
+
+
+ÉTAPE 4 : Lancer le seed ! 🎉
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+python seed_inventory.py
+
+
+✨ RÉSULTAT ATTENDU :
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 Démarrage du peuplement ULTRA RÉALISTE de la base de données...
+📦 Inventaire complet de garage automobile
+
+🔧 Ajout des pièces détachées...
+  ✅ Alternateur Bosch 14V 90A - 0124525015 (#1)
+  ✅ Démarreur Valeo 12V 1.1kW - D6RA133 (#2)
+  ✅ Batterie Varta Blue Dynamic E11 - E11 574012068 (#3)
+  ... (et 57 autres pièces)
+
+🛢️  Ajout des huiles et liquides...
+  ✅ Huile Moteur Castrol Edge 5W30 C3 - 15669E (45.0L) (#61)
+  ✅ Huile Moteur Total Quartz 9000 5W40 - 183199 (35.0L) (#62)
+  ... (et 16 autres liquides)
+
+🎉 Terminé ! 78 articles ajoutés avec succès !
+
+📊 Résumé détaillé :
+   - Pièces détachées : 60
+   - Huiles & Liquides : 18
+   - Total articles : 78
+
+✨ Ton inventaire de DÉMO ULTRA RÉALISTE est prêt !
+
+
+═══════════════════════════════════════════════════════════════
+COPIEZ CES COMMANDES UNE PAR UNE DANS POWERSHELL !
+═══════════════════════════════════════════════════════════════
+
