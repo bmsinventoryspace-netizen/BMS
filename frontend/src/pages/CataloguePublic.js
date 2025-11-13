@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { Logo } from '../hooks/useLogo';
-import ServerWakeup from '../components/ServerWakeup';
 import { Search, Phone, Filter } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -25,24 +24,15 @@ const CataloguePublic = () => {
   const [settings, setSettings] = useState({});
   const [categories, setCategories] = useState([]);
   const [selectedPub, setSelectedPub] = useState(null);
-  const [serverReady, setServerReady] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   const etats = ['Comme neuf', 'Très bon état', 'Bon état', 'État acceptable', 'Usé', 'Mauvais état', 'Très mauvais état'];
 
   useEffect(() => {
-    if (serverReady) {
-      fetchArticles();
-      fetchPubs();
-      fetchSettings();
-      fetchCategories();
-    }
-  }, [serverReady]);
-
-  const handleServerReady = () => {
-    setServerReady(true);
-    setIsLoading(false);
-  };
+    fetchArticles();
+    fetchPubs();
+    fetchSettings();
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     filterArticles();
@@ -128,11 +118,6 @@ const CataloguePublic = () => {
   };
 
   const catalogueWithPubs = insertPubsInCatalogue();
-
-  // Afficher l'écran de chargement si le serveur n'est pas prêt
-  if (!serverReady) {
-    return <ServerWakeup onReady={handleServerReady} />;
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50">
