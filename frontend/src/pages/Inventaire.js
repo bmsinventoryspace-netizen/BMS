@@ -37,6 +37,7 @@ const Inventaire = () => {
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [selectedArticleView, setSelectedArticleView] = useState(null);
+  const [remisePercentage, setRemisePercentage] = useState('');
 
   const etats = ['Comme neuf', 'Très bon état', 'Bon état', 'État acceptable', 'Usé', 'Mauvais état', 'Très mauvais état'];
 
@@ -316,8 +317,22 @@ const Inventaire = () => {
     setFormData(getEmptyFormData());
     setPhotos([]);
     setArticleType('piece');
+    setRemisePercentage('');
     setShowAddDialog(true);
   };
+
+  const applyRemise = (percentage) => {
+    const prixNeuf = parseFloat(formData.prix_neuf);
+    if (prixNeuf && percentage) {
+      const remise = prixNeuf * (parseFloat(percentage) / 100);
+      const prixVente = (prixNeuf - remise).toFixed(2);
+      setFormData({ ...formData, prix_vente: prixVente });
+      setRemisePercentage(percentage);
+      toast.success(`Remise de ${percentage}% appliquée : ${prixVente}€`);
+    }
+  };
+
+  const quickRemises = [10, 15, 20, 25, 30, 50];
 
   return (
     <Layout>
@@ -645,34 +660,119 @@ const Inventaire = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Label>Prix neuf (€)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={formData.prix_neuf}
-                        onChange={(e) => setFormData({ ...formData, prix_neuf: e.target.value })}
-                        data-testid="prix-neuf-input"
-                      />
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Prix neuf (€)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={formData.prix_neuf}
+                          onChange={(e) => {
+                            setFormData({ ...formData, prix_neuf: e.target.value });
+                            setRemisePercentage(''); // Réinitialiser la remise
+                          }}
+                          data-testid="prix-neuf-input"
+                        />
+                      </div>
+                      <div>
+                        <Label>Prix achat (€)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={formData.prix_achat}
+                          onChange={(e) => setFormData({ ...formData, prix_achat: e.target.value })}
+                          data-testid="prix-achat-input"
+                        />
+                      </div>
                     </div>
+
+                    {/* Calculateur de remise */}
+                    {formData.prix_neuf && (
+                      <div className="bg-green-50 p-4 rounded-xl space-y-3">
+                        <Label className="text-green-800 font-semibold">
+                          💰 Calculateur de remise
+                        </Label>
+                        
+                        {/* Boutons remises rapides */}
+                        <div className="flex flex-wrap gap-2">
+                          {quickRemises.map(percent => (
+                            <Button
+                              key={percent}
+                              type="button"
+                              size="sm"
+                              variant={remisePercentage === percent.toString() ? 'default' : 'outline'}
+                              onClick={() => applyRemise(percent.toString())}
+                              className="flex-1 min-w-[60px]"
+                            >
+                              -{percent}%
+                            </Button>
+                          ))}
+                        </div>
+
+                        {/* Remise personnalisée */}
+                        <div className="flex space-x-2">
+                          <div className="flex-1">
+                            <Input
+                              type="number"
+                              placeholder="Remise personnalisée (%)"
+                              value={remisePercentage}
+                              onChange={(e) => setRemisePercentage(e.target.value)}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  applyRemise(remisePercentage);
+                                }
+                              }}
+                              className="border-green-300"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            onClick={() => applyRemise(remisePercentage)}
+                            disabled={!remisePercentage}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            Appliquer
+                          </Button>
+                        </div>
+
+                        {/* Aperçu du calcul */}
+                        {remisePercentage && (
+                          <div className="text-sm text-green-800 bg-white p-2 rounded border border-green-200">
+                            <p className="flex justify-between">
+                              <span>Prix neuf :</span>
+                              <span className="font-semibold">{formData.prix_neuf}€</span>
+                            </p>
+                            <p className="flex justify-between">
+                              <span>Remise ({remisePercentage}%) :</span>
+                              <span className="font-semibold text-red-600">
+                                -{(parseFloat(formData.prix_neuf) * parseFloat(remisePercentage) / 100).toFixed(2)}€
+                              </span>
+                            </p>
+                            <p className="flex justify-between pt-2 border-t border-green-200 mt-2">
+                              <span className="font-bold">Prix final :</span>
+                              <span className="font-bold text-green-600">{formData.prix_vente}€</span>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Prix de vente manuel */}
                     <div>
-                      <Label>Prix achat (€)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={formData.prix_achat}
-                        onChange={(e) => setFormData({ ...formData, prix_achat: e.target.value })}
-                        data-testid="prix-achat-input"
-                      />
-                    </div>
-                    <div>
-                      <Label>Prix vente (€)</Label>
+                      <Label>
+                        Prix vente (€)
+                        <span className="text-xs text-gray-500 ml-2">ou utilisez le calculateur ci-dessus</span>
+                      </Label>
                       <Input
                         type="number"
                         step="0.01"
                         value={formData.prix_vente}
-                        onChange={(e) => setFormData({ ...formData, prix_vente: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, prix_vente: e.target.value });
+                          setRemisePercentage(''); // Réinitialiser la remise si modification manuelle
+                        }}
                         data-testid="prix-vente-input"
                       />
                     </div>
