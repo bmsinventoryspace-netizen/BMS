@@ -50,9 +50,21 @@ const Login = () => {
     indigo: 'border-indigo-200 focus:border-indigo-400',
   };
 
+  const themeLinks = {
+    blue: 'text-blue-600 hover:text-blue-700',
+    green: 'text-green-600 hover:text-green-700',
+    red: 'text-red-600 hover:text-red-700',
+    purple: 'text-purple-600 hover:text-purple-700',
+    orange: 'text-orange-600 hover:text-orange-700',
+    teal: 'text-teal-600 hover:text-teal-700',
+    pink: 'text-pink-600 hover:text-pink-700',
+    indigo: 'text-indigo-600 hover:text-indigo-700',
+  };
+
   const gradient = themeGradients[themeColor] || themeGradients.blue;
   const buttonClass = themeButtons[themeColor] || themeButtons.blue;
   const borderClass = themeBorders[themeColor] || themeBorders.blue;
+  const linkClass = themeLinks[themeColor] || themeLinks.blue;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -149,7 +161,7 @@ const Login = () => {
           </form>
 
           <div className="mt-6 text-center">
-            <a href="/" className={`text-${themeColor}-600 hover:text-${themeColor}-700 text-sm font-medium`}>
+            <a href="/" className={`${linkClass} text-sm font-medium`}>
               ← Retour au catalogue public
             </a>
           </div>
