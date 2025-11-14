@@ -19,7 +19,7 @@ const CataloguePublic = () => {
   const [pubs, setPubs] = useState([]);
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchMarque, setSearchMarque] = useState('');
+  const [selectedMarque, setSelectedMarque] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSousCategorie, setSelectedSousCategorie] = useState('all');
   const [selectedEtat, setSelectedEtat] = useState('all');
@@ -27,6 +27,7 @@ const CataloguePublic = () => {
   const [settings, setSettings] = useState({});
   const [categories, setCategories] = useState([]);
   const [sousCategories, setSousCategories] = useState([]);
+  const [marques, setMarques] = useState([]);
   const [selectedPub, setSelectedPub] = useState(null);
   const [serverReady, setServerReady] = useState(false);
   const [panier, setPanier] = useState([]);
@@ -46,7 +47,7 @@ const CataloguePublic = () => {
 
   useEffect(() => {
     filterArticles();
-  }, [articles, searchTerm, searchMarque, selectedCategory, selectedSousCategorie, selectedEtat]);
+  }, [articles, searchTerm, selectedMarque, selectedCategory, selectedSousCategorie, selectedEtat]);
 
   const fetchArticles = async () => {
     try {
@@ -80,6 +81,15 @@ const CataloguePublic = () => {
       const response = await axios.get(`${API}/categories`);
       setCategories(response.data.categories || []);
       setSousCategories(response.data.sous_categories || []);
+      
+      // Récupérer les marques depuis les articles
+      const articlesResponse = await axios.get(`${API}/articles/public`);
+      const allMarques = articlesResponse.data
+        .map(article => article.marque)
+        .filter(marque => marque && marque.trim())
+        .map(marque => marque.trim());
+      const uniqueMarques = [...new Set(allMarques)].sort();
+      setMarques(uniqueMarques);
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
@@ -95,10 +105,8 @@ const CataloguePublic = () => {
       );
     }
 
-    if (searchMarque) {
-      filtered = filtered.filter(article =>
-        article.marque?.toLowerCase().includes(searchMarque.toLowerCase())
-      );
+    if (selectedMarque !== 'all') {
+      filtered = filtered.filter(article => article.marque === selectedMarque);
     }
 
     if (selectedCategory !== 'all') {
@@ -270,16 +278,17 @@ const CataloguePublic = () => {
               />
             </div>
             
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <Input
-                type="text"
-                placeholder="Rechercher par marque..."
-                value={searchMarque}
-                onChange={(e) => setSearchMarque(e.target.value)}
-                className="pl-10 border-blue-200 focus:border-blue-400"
-              />
-            </div>
+            <Select value={selectedMarque} onValueChange={setSelectedMarque}>
+              <SelectTrigger className="border-blue-200">
+                <SelectValue placeholder="Marque" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes les marques</SelectItem>
+                {marques.map(marque => (
+                  <SelectItem key={marque} value={marque}>{marque}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             
             <Select value={selectedCategory} onValueChange={setSelectedCategory} data-testid="category-filter">
               <SelectTrigger className="border-blue-200">

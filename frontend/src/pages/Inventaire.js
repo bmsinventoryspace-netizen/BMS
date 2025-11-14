@@ -31,11 +31,14 @@ const Inventaire = () => {
   const [articleType, setArticleType] = useState('piece');
   const [categories, setCategories] = useState([]);
   const [sousCategories, setSousCategories] = useState([]);
+  const [marques, setMarques] = useState([]);
   const [formData, setFormData] = useState(getEmptyFormData());
   const [photos, setPhotos] = useState([]);
   const [newSousCategorie, setNewSousCategorie] = useState('');
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [showNewMarqueInput, setShowNewMarqueInput] = useState(false);
+  const [newMarqueName, setNewMarqueName] = useState('');
   const [selectedArticleView, setSelectedArticleView] = useState(null);
   const [remisePercentage, setRemisePercentage] = useState('');
 
@@ -70,6 +73,7 @@ const Inventaire = () => {
   useEffect(() => {
     fetchArticles();
     fetchCategories();
+    fetchMarques();
   }, []);
 
   useEffect(() => {
@@ -108,6 +112,20 @@ const Inventaire = () => {
       setSousCategories(uniqueSousCategories);
     } catch (error) {
       console.error('Error fetching categories:', error);
+    }
+  };
+
+  const fetchMarques = async () => {
+    try {
+      const response = await axios.get(`${API}/articles`);
+      const allMarques = response.data
+        .map(article => article.marque)
+        .filter(marque => marque && marque.trim())
+        .map(marque => marque.trim());
+      const uniqueMarques = [...new Set(allMarques)].sort();
+      setMarques(uniqueMarques);
+    } catch (error) {
+      console.error('Error fetching marques:', error);
     }
   };
 
@@ -312,12 +330,44 @@ const Inventaire = () => {
     }
   };
 
+  const openRefSearch = () => {
+    if (formData.ref) {
+      const url = `https://www.google.com/search?q=${encodeURIComponent(formData.ref)}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const handleMarqueChange = (value) => {
+    if (value === '__new__') {
+      setShowNewMarqueInput(true);
+      setNewMarqueName('');
+    } else {
+      setFormData({ ...formData, marque: value });
+      setShowNewMarqueInput(false);
+    }
+  };
+
+  const handleNewMarqueConfirm = () => {
+    if (newMarqueName.trim()) {
+      setFormData({ ...formData, marque: newMarqueName.trim() });
+      setShowNewMarqueInput(false);
+      toast.success(`Marque "${newMarqueName.trim()}" créée !`);
+      setNewMarqueName('');
+      // Ajouter la nouvelle marque à la liste
+      if (!marques.includes(newMarqueName.trim())) {
+        setMarques([...marques, newMarqueName.trim()].sort());
+      }
+    }
+  };
+
   const openAddDialog = () => {
     setSelectedArticle(null);
     setFormData(getEmptyFormData());
     setPhotos([]);
     setArticleType('piece');
     setRemisePercentage('');
+    setShowNewCategoryInput(false);
+    setShowNewMarqueInput(false);
     setShowAddDialog(true);
   };
 
@@ -423,11 +473,16 @@ const Inventaire = () => {
                     </div>
                     <div>
                       <Label>Référence</Label>
-                      <Input
-                        value={formData.ref}
-                        onChange={(e) => setFormData({ ...formData, ref: e.target.value })}
-                        data-testid="ref-input"
-                      />
+                      <div className="flex space-x-2">
+                        <Input
+                          value={formData.ref}
+                          onChange={(e) => setFormData({ ...formData, ref: e.target.value })}
+                          data-testid="ref-input"
+                        />
+                        <Button type="button" size="icon" variant="outline" onClick={openRefSearch} className="shrink-0">
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
 
@@ -516,11 +571,46 @@ const Inventaire = () => {
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                           <Label>Marque</Label>
-                          <Input
-                            value={formData.marque}
-                            onChange={(e) => setFormData({ ...formData, marque: e.target.value })}
-                            data-testid="marque-input"
-                          />
+                          {!showNewMarqueInput ? (
+                            <Select 
+                              value={formData.marque} 
+                              onValueChange={handleMarqueChange}
+                              data-testid="marque-select"
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionner une marque" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {marques.map(marque => (
+                                  <SelectItem key={marque} value={marque}>{marque}</SelectItem>
+                                ))}
+                                <SelectItem value="__new__" className="text-blue-600 font-semibold">
+                                  + Nouvelle marque
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div className="flex space-x-2">
+                              <Input
+                                value={newMarqueName}
+                                onChange={(e) => setNewMarqueName(e.target.value)}
+                                placeholder="Nom de la nouvelle marque"
+                                onKeyPress={(e) => e.key === 'Enter' && handleNewMarqueConfirm()}
+                                autoFocus
+                              />
+                              <Button type="button" size="sm" onClick={handleNewMarqueConfirm}>
+                                ✓
+                              </Button>
+                              <Button 
+                                type="button" 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => setShowNewMarqueInput(false)}
+                              >
+                                ✕
+                              </Button>
+                            </div>
+                          )}
                         </div>
                         <div>
                           <Label>Viscosité</Label>
