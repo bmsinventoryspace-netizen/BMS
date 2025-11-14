@@ -4,7 +4,7 @@ import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
-import { Search, Plus, Minus, Eye, EyeOff, Edit, ShoppingCart } from 'lucide-react';
+import { Search, Plus, Minus, Eye, EyeOff, Edit, ShoppingCart, Trash2, AlertTriangle } from 'lucide-react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 
@@ -27,9 +27,16 @@ const CatalogueGestion = () => {
 
   const fetchArticles = async () => {
     try {
-      const response = await axios.get(`${API}/articles`);
-      // Filtrer uniquement les articles publics
-      const publicArticles = response.data.filter(a => a.public);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/articles`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // Filtrer uniquement les articles publics avec stock > 0
+      const publicArticles = response.data.filter(a => 
+        a.public && 
+        ((a.type === 'piece' && a.quantite > 0) || 
+         (a.type === 'liquide' && a.litres > 0))
+      );
       setArticles(publicArticles);
     } catch (error) {
       toast.error('Erreur de chargement');
@@ -53,15 +60,20 @@ const CatalogueGestion = () => {
 
   const updateQuantity = async (article, change) => {
     try {
+      const token = localStorage.getItem('token');
       if (article.type === 'liquide') {
         // Pour les liquides, utiliser l'endpoint existant
-        await axios.post(`${API}/articles/${article.id}/quantity`, { change });
+        await axios.post(`${API}/articles/${article.id}/quantity`, { change }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
       } else {
         // Pour les pièces, mettre à jour la quantité
         const newQuantite = Math.max(0, article.quantite + change);
         await axios.put(`${API}/articles/${article.id}`, {
           ...article,
           quantite: newQuantite
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
         });
       }
       toast.success('Quantité mise à jour');
@@ -73,14 +85,58 @@ const CatalogueGestion = () => {
 
   const togglePublic = async (article) => {
     try {
+      const token = localStorage.getItem('token');
       await axios.put(`${API}/articles/${article.id}`, {
         ...article,
         public: !article.public
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       toast.success(article.public ? 'Retiré du catalogue' : 'Ajouté au catalogue');
       fetchArticles();
     } catch (error) {
       toast.error('Erreur');
+    }
+  };
+
+  const setStockToZero = async (article) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (article.type === 'liquide') {
+        await axios.post(`${API}/articles/${article.id}/quantity`, { 
+          change: -article.litres 
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else {
+        await axios.put(`${API}/articles/${article.id}`, {
+          ...article,
+          quantite: 0
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+      toast.success('Stock mis à 0 - Article retiré du catalogue public');
+      fetchArticles();
+    } catch (error) {
+      toast.error('Erreur lors de la mise à jour');
+    }
+  };
+
+  const deleteArticle = async (article) => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement "${article.nom}" ?\n\nCette action est irréversible.`)) {
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API}/articles/${article.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Article supprimé définitivement');
+      fetchArticles();
+    } catch (error) {
+      toast.error('Erreur lors de la suppression');
     }
   };
 
@@ -220,15 +276,35 @@ const CatalogueGestion = () => {
                   </div>
                 )}
 
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => togglePublic(article)}
-                >
-                  <EyeOff className="w-3 h-3 mr-2" />
-                  Retirer du catalogue
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setStockToZero(article)}
+                  >
+                    <AlertTriangle className="w-3 h-3 mr-2" />
+                    Mettre stock à 0
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => togglePublic(article)}
+                  >
+                    <EyeOff className="w-3 h-3 mr-2" />
+                    Retirer du catalogue
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="w-full"
+                    onClick={() => deleteArticle(article)}
+                  >
+                    <Trash2 className="w-3 h-3 mr-2" />
+                    Supprimer définitivement
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
@@ -303,17 +379,52 @@ const CatalogueGestion = () => {
                 )}
 
                 {/* Prix */}
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <div>
-                    {selectedArticle.prix_vente && (
-                      <p className="text-3xl font-bold text-green-600">{selectedArticle.prix_vente}€</p>
-                    )}
-                    {selectedArticle.prix_neuf && selectedArticle.prix_neuf !== selectedArticle.prix_vente && (
-                      <p className="text-lg text-gray-500 line-through">{selectedArticle.prix_neuf}€</p>
-                    )}
+                <div className="pt-4 border-t space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      {selectedArticle.prix_vente && (
+                        <p className="text-3xl font-bold text-green-600">{selectedArticle.prix_vente}€</p>
+                      )}
+                      {selectedArticle.prix_neuf && selectedArticle.prix_neuf !== selectedArticle.prix_vente && (
+                        <p className="text-lg text-gray-500 line-through">{selectedArticle.prix_neuf}€</p>
+                      )}
+                    </div>
                   </div>
+                  
+                  {/* Actions */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      onClick={() => setStockToZero(selectedArticle)}
+                    >
+                      <AlertTriangle className="w-4 h-4 mr-2" />
+                      Stock à 0
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        togglePublic(selectedArticle);
+                        setSelectedArticle(null);
+                      }}
+                    >
+                      <EyeOff className="w-4 h-4 mr-2" />
+                      Retirer
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        deleteArticle(selectedArticle);
+                        setSelectedArticle(null);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Supprimer
+                    </Button>
+                  </div>
+                  
                   <Button
                     variant="outline"
+                    className="w-full"
                     onClick={() => setSelectedArticle(null)}
                   >
                     Fermer

@@ -379,7 +379,14 @@ async def get_articles(user_data: dict = Depends(verify_token)):
 
 @api_router.get("/articles/public")
 async def get_public_articles():
-    articles = await db.articles.find({'public': True}, {'_id': 0}).sort('id', -1).to_list(1000)
+    # Récupérer tous les articles publics
+    all_articles = await db.articles.find({'public': True}, {'_id': 0}).sort('id', -1).to_list(1000)
+    # Filtrer ceux qui ont du stock (quantite > 0 pour pièces, litres > 0 pour liquides)
+    articles = [
+        a for a in all_articles 
+        if (a.get('type') == 'piece' and a.get('quantite', 0) > 0) or 
+           (a.get('type') == 'liquide' and a.get('litres', 0) > 0)
+    ]
     return articles
 
 @api_router.post("/articles")
