@@ -19,11 +19,14 @@ const CataloguePublic = () => {
   const [pubs, setPubs] = useState([]);
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchMarque, setSearchMarque] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedSousCategorie, setSelectedSousCategorie] = useState('all');
   const [selectedEtat, setSelectedEtat] = useState('all');
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [settings, setSettings] = useState({});
   const [categories, setCategories] = useState([]);
+  const [sousCategories, setSousCategories] = useState([]);
   const [selectedPub, setSelectedPub] = useState(null);
   const [serverReady, setServerReady] = useState(false);
   const [panier, setPanier] = useState([]);
@@ -43,7 +46,7 @@ const CataloguePublic = () => {
 
   useEffect(() => {
     filterArticles();
-  }, [articles, searchTerm, selectedCategory, selectedEtat]);
+  }, [articles, searchTerm, searchMarque, selectedCategory, selectedSousCategorie, selectedEtat]);
 
   const fetchArticles = async () => {
     try {
@@ -76,6 +79,7 @@ const CataloguePublic = () => {
     try {
       const response = await axios.get(`${API}/categories`);
       setCategories(response.data.categories || []);
+      setSousCategories(response.data.sous_categories || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
@@ -91,8 +95,25 @@ const CataloguePublic = () => {
       );
     }
 
+    if (searchMarque) {
+      filtered = filtered.filter(article =>
+        article.marque?.toLowerCase().includes(searchMarque.toLowerCase())
+      );
+    }
+
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(article => article.categorie === selectedCategory);
+    }
+
+    if (selectedSousCategorie !== 'all') {
+      filtered = filtered.filter(article => {
+        const sousCats = article.sous_categorie 
+          ? (typeof article.sous_categorie === 'string' 
+              ? article.sous_categorie.split(',').map(s => s.trim())
+              : article.sous_categorie)
+          : [];
+        return sousCats.includes(selectedSousCategorie);
+      });
     }
 
     if (selectedEtat !== 'all') {
@@ -110,11 +131,22 @@ const CataloguePublic = () => {
 
   const addToPanier = (article, e) => {
     e.stopPropagation();
+    const quantiteDisponible = article.quantite || 0;
+    if (quantiteDisponible <= 0) {
+      alert('Cet article n\'est plus en stock');
+      return;
+    }
+    
     const existing = panier.find(item => item.article_id === article.id);
     if (existing) {
+      const nouvelleQuantite = existing.quantite + 1;
+      if (nouvelleQuantite > quantiteDisponible) {
+        alert(`Quantité maximale disponible: ${quantiteDisponible}`);
+        return;
+      }
       setPanier(panier.map(item => 
         item.article_id === article.id 
-          ? { ...item, quantite: item.quantite + 1 }
+          ? { ...item, quantite: nouvelleQuantite }
           : item
       ));
     } else {
@@ -123,7 +155,8 @@ const CataloguePublic = () => {
         nom: article.nom,
         ref: article.ref,
         prix_vente: article.prix_vente || 0,
-        quantite: 1
+        quantite: 1,
+        quantite_max: quantiteDisponible
       }]);
     }
   };
@@ -138,6 +171,11 @@ const CataloguePublic = () => {
       if (item.article_id === articleId) {
         const newQuantite = item.quantite + delta;
         if (newQuantite <= 0) return null;
+        const quantiteMax = item.quantite_max || 999;
+        if (newQuantite > quantiteMax) {
+          alert(`Quantité maximale disponible: ${quantiteMax}`);
+          return item;
+        }
         return { ...item, quantite: newQuantite };
       }
       return item;
@@ -219,7 +257,7 @@ const CataloguePublic = () => {
       {/* Filters */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="glass p-6 rounded-2xl shadow-md">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="relative" data-testid="search-bar">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <Input
@@ -232,6 +270,17 @@ const CataloguePublic = () => {
               />
             </div>
             
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Input
+                type="text"
+                placeholder="Rechercher par marque..."
+                value={searchMarque}
+                onChange={(e) => setSearchMarque(e.target.value)}
+                className="pl-10 border-blue-200 focus:border-blue-400"
+              />
+            </div>
+            
             <Select value={selectedCategory} onValueChange={setSelectedCategory} data-testid="category-filter">
               <SelectTrigger className="border-blue-200">
                 <SelectValue placeholder="Catégorie" />
@@ -240,6 +289,18 @@ const CataloguePublic = () => {
                 <SelectItem value="all">Toutes les catégories</SelectItem>
                 {categories.map(cat => (
                   <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedSousCategorie} onValueChange={setSelectedSousCategorie}>
+              <SelectTrigger className="border-blue-200">
+                <SelectValue placeholder="Sous-catégorie" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes les sous-catégories</SelectItem>
+                {sousCategories.map(sousCat => (
+                  <SelectItem key={sousCat} value={sousCat}>{sousCat}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -359,11 +420,12 @@ const CataloguePublic = () => {
                       </div>
                       <Button
                         size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
                         onClick={(e) => addToPanier(article, e)}
+                        disabled={!article.quantite || article.quantite <= 0}
                       >
                         <Plus className="w-4 h-4 mr-1" />
-                        Ajouter
+                        {article.quantite && article.quantite > 0 ? 'Ajouter' : 'Rupture'}
                       </Button>
                     </div>
                   </div>
@@ -513,9 +575,13 @@ const CataloguePublic = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => updateQuantite(item.article_id, 1)}
+                        disabled={item.quantite >= (item.quantite_max || 999)}
                       >
                         <Plus className="w-4 h-4" />
                       </Button>
+                      {item.quantite_max && (
+                        <span className="text-xs text-gray-500 ml-1">/ {item.quantite_max}</span>
+                      )}
                       <Button
                         size="sm"
                         variant="ghost"
