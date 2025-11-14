@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import ServerWakeup from './components/ServerWakeup';
+import { ThemeProvider } from './contexts/ThemeContext';
 import './App.css';
 import CataloguePublic from './pages/CataloguePublic';
 import Login from './pages/Login';
@@ -98,8 +99,9 @@ function App() {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, socket }}>
-      <BrowserRouter>
+    <ThemeProvider>
+      <AuthContext.Provider value={{ user, login, logout, socket }}>
+        <BrowserRouter>
         <Routes>
           <Route path="/" element={<CataloguePublic />} />
           <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
@@ -117,9 +119,10 @@ function App() {
           <Route path="/admin/commandes" element={user?.role === 'admin' ? <AdminCommandes /> : <Navigate to="/dashboard" />} />
           <Route path="/admin/profil" element={user ? <AdminProfil /> : <Navigate to="/login" />} />
         </Routes>
-      </BrowserRouter>
-      <Toaster position="top-center" richColors />
-    </AuthContext.Provider>
+        </BrowserRouter>
+        <Toaster position="top-center" richColors />
+      </AuthContext.Provider>
+    </ThemeProvider>
   );
 }
 

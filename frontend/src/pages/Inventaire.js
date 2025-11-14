@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../App';
 import Layout from '../components/Layout';
+import { useTheme } from '../hooks/useTheme';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -18,6 +19,7 @@ const API = `${BACKEND_URL}/api`;
 
 const Inventaire = () => {
   const { user } = useContext(AuthContext);
+  const { theme } = useTheme();
   const [articles, setArticles] = useState([]);
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -393,7 +395,7 @@ const Inventaire = () => {
             <Button
               onClick={handleExport}
               variant="outline"
-              className="border-blue-600 text-blue-600 hover:bg-blue-50"
+              className={`${theme.border500} ${theme.textLight} ${theme.bgLight} hover:opacity-80`}
               data-testid="export-button"
             >
               <Download className="w-4 h-4 mr-2" />
@@ -403,7 +405,7 @@ const Inventaire = () => {
               <DialogTrigger asChild>
                 <Button
                   onClick={openAddDialog}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className={`${theme.bg} ${theme.bgHover}`}
                   data-testid="add-article-button"
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -584,7 +586,7 @@ const Inventaire = () => {
                                 {marques.map(marque => (
                                   <SelectItem key={marque} value={marque}>{marque}</SelectItem>
                                 ))}
-                                <SelectItem value="__new__" className="text-blue-600 font-semibold">
+                                <SelectItem value="__new__" className={`${theme.textLight} font-semibold`}>
                                   + Nouvelle marque
                                 </SelectItem>
                               </SelectContent>
@@ -694,13 +696,13 @@ const Inventaire = () => {
                             {formData.sous_categories.map((sc, index) => (
                               <div 
                                 key={index} 
-                                className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center space-x-2 text-sm"
+                                className={`${theme.bg100} ${theme.text700} px-3 py-1 rounded-full flex items-center space-x-2 text-sm`}
                               >
                                 <span>{sc}</span>
                                 <button
                                   type="button"
                                   onClick={() => removeSousCategorie(index)}
-                                  className="text-blue-600 hover:text-blue-800 font-bold"
+                                  className={`${theme.textLight} ${theme.text700} hover:opacity-80 font-bold`}
                                 >
                                   ×
                                 </button>
@@ -879,7 +881,7 @@ const Inventaire = () => {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
-                    <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 py-6 sm:py-3" data-testid="submit-article-button">
+                    <Button type="submit" className={`w-full ${theme.bg} ${theme.bgHover} py-6 sm:py-3`} data-testid="submit-article-button">
                       {selectedArticle ? 'Modifier' : 'Créer'}
                     </Button>
                     <Button type="button" variant="outline" className="w-full py-6 sm:py-3" onClick={() => setShowAddDialog(false)}>
@@ -902,13 +904,13 @@ const Inventaire = () => {
                 placeholder="Rechercher par nom, référence, SKU ou ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 border-blue-200 focus:border-blue-400"
+                className={`pl-10 ${theme.borderInput} ${theme.focus}`}
                 data-testid="search-input"
               />
             </div>
             
             <Select value={selectedCategory} onValueChange={setSelectedCategory} data-testid="filter-category">
-              <SelectTrigger className="border-blue-200">
+              <SelectTrigger className={theme.borderInput}>
                 <SelectValue placeholder="Catégorie" />
               </SelectTrigger>
               <SelectContent>
@@ -920,7 +922,7 @@ const Inventaire = () => {
             </Select>
 
             <Select value={selectedEtat} onValueChange={setSelectedEtat} data-testid="filter-etat">
-              <SelectTrigger className="border-blue-200">
+              <SelectTrigger className={theme.borderInput}>
                 <SelectValue placeholder="État" />
               </SelectTrigger>
               <SelectContent>
@@ -934,7 +936,7 @@ const Inventaire = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <Select value={selectedSousCategoryFilter} onValueChange={setSelectedSousCategoryFilter} data-testid="filter-sous-category">
-              <SelectTrigger className="border-blue-200">
+              <SelectTrigger className={theme.borderInput}>
                 <SelectValue placeholder="Sous-catégorie" />
               </SelectTrigger>
               <SelectContent>
@@ -946,7 +948,7 @@ const Inventaire = () => {
             </Select>
 
             <Select value={selectedType} onValueChange={setSelectedType} data-testid="filter-type">
-              <SelectTrigger className="border-blue-200">
+              <SelectTrigger className={theme.borderInput}>
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
@@ -1009,7 +1011,7 @@ const Inventaire = () => {
                   setSelectedEtat('all');
                   setSelectedType('all');
                 }}
-                className="h-7 px-2 text-xs text-blue-600"
+                className={`h-7 px-2 text-xs ${theme.textLight}`}
               >
                 Réinitialiser tout
               </Button>
@@ -1039,7 +1041,7 @@ const Inventaire = () => {
                   </div>
                 )}
                 <div className="absolute top-2 left-2">
-                  <span className="bg-blue-600 text-white px-2 py-1 rounded-full text-xs font-bold">
+                  <span className={`${theme.bg} text-white px-2 py-1 rounded-full text-xs font-bold`}>
                     #{article.id}
                   </span>
                 </div>
@@ -1070,12 +1072,12 @@ const Inventaire = () => {
                   </div>
                 )}
                 {article.type === 'piece' && article.etat && (
-                  <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full mb-2">
+                  <span className={`inline-block px-2 py-1 ${theme.bg100} ${theme.text700} text-xs rounded-full mb-2`}>
                     {article.etat}
                   </span>
                 )}
                 {article.type === 'liquide' && (
-                  <p className="text-sm text-blue-600 font-semibold mb-2">
+                  <p className={`text-sm ${theme.textLight} font-semibold mb-2`}>
                     {article.litres || 0}L disponible
                   </p>
                 )}
@@ -1124,7 +1126,7 @@ const Inventaire = () => {
           {selectedArticleView && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-2xl text-blue-900">
+                <DialogTitle className={`text-2xl ${theme.text}`}>
                   {selectedArticleView.nom}
                   <span className="ml-3 text-sm text-gray-500">#{selectedArticleView.id}</span>
                 </DialogTitle>
@@ -1146,7 +1148,7 @@ const Inventaire = () => {
                 )}
 
                 {/* Informations principales */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-blue-50 p-4 rounded-xl">
+                <div className={`grid grid-cols-2 md:grid-cols-3 gap-4 ${theme.bgLight} p-4 rounded-xl`}>
                   <div>
                     <p className="text-xs text-gray-600 mb-1">Type</p>
                     <p className="font-semibold text-gray-900">
@@ -1172,7 +1174,7 @@ const Inventaire = () => {
                       <p className="text-xs text-gray-600 mb-1">Sous-catégories</p>
                       <div className="flex flex-wrap gap-1">
                         {selectedArticleView.sous_categorie.split(', ').map((sc, idx) => (
-                          <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                          <span key={idx} className={`px-2 py-1 ${theme.bg100} ${theme.text700} text-xs rounded`}>
                             {sc}
                           </span>
                         ))}
@@ -1213,7 +1215,7 @@ const Inventaire = () => {
                     {selectedArticleView.litres && (
                       <div>
                         <p className="text-xs text-gray-600 mb-1">Quantité actuelle</p>
-                        <p className="font-semibold text-blue-600">{selectedArticleView.litres}L</p>
+                        <p className={`font-semibold ${theme.textLight}`}>{selectedArticleView.litres}L</p>
                       </div>
                     )}
                     {selectedArticleView.quantite_min && (
@@ -1297,7 +1299,7 @@ const Inventaire = () => {
                       setSelectedArticleView(null);
                       handleEdit(selectedArticleView);
                     }}
-                    className="w-full bg-blue-600 hover:bg-blue-700 py-6 sm:py-3"
+                    className={`w-full ${theme.bg} ${theme.bgHover} py-6 sm:py-3`}
                   >
                     <Edit className="w-4 h-4 mr-2" />
                     Modifier

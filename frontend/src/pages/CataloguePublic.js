@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { Logo } from '../hooks/useLogo';
+import { useTheme } from '../hooks/useTheme';
 import ServerWakeup from '../components/ServerWakeup';
 import { Search, Phone, Filter, ShoppingCart, Plus, Minus, X, Check } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -33,6 +34,7 @@ const CataloguePublic = () => {
   const [panier, setPanier] = useState([]);
   const [showPanier, setShowPanier] = useState(false);
   const [commandeValidee, setCommandeValidee] = useState(null);
+  const { theme } = useTheme();
 
   const etats = ['Comme neuf', 'Très bon état', 'Bon état', 'État acceptable', 'Usé', 'Mauvais état', 'Très mauvais état'];
 
@@ -241,20 +243,20 @@ const CataloguePublic = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50">
+    <div className={`min-h-screen bg-gradient-to-br ${theme.light}`}>
       {/* Header */}
-      <header className="glass sticky top-0 z-50 border-b border-blue-100">
+      <header className={`glass sticky top-0 z-50 border-b ${theme.border}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Logo size="md" />
               <div>
-                <h1 className="text-2xl font-bold text-blue-900">BMS Inventory</h1>
-                <p className="text-sm text-blue-600">Catalogue Public</p>
+                <h1 className={`text-2xl font-bold ${theme.text}`}>BMS Inventory</h1>
+                <p className={`text-sm ${theme.textLight}`}>Catalogue Public</p>
               </div>
             </div>
             <Link to="/login" data-testid="login-button">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button className={`${theme.bg} ${theme.bgHover} text-white`}>
                 Connexion
               </Button>
             </Link>
@@ -273,13 +275,13 @@ const CataloguePublic = () => {
                 placeholder="Rechercher par nom ou référence..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 border-blue-200 focus:border-blue-400"
+                className={`pl-10 ${theme.borderInput} ${theme.focus}`}
                 data-testid="search-input"
               />
             </div>
             
             <Select value={selectedMarque} onValueChange={setSelectedMarque}>
-              <SelectTrigger className="border-blue-200">
+              <SelectTrigger className={theme.borderInput}>
                 <SelectValue placeholder="Marque" />
               </SelectTrigger>
               <SelectContent>
@@ -291,7 +293,7 @@ const CataloguePublic = () => {
             </Select>
             
             <Select value={selectedCategory} onValueChange={setSelectedCategory} data-testid="category-filter">
-              <SelectTrigger className="border-blue-200">
+              <SelectTrigger className={theme.borderInput}>
                 <SelectValue placeholder="Catégorie" />
               </SelectTrigger>
               <SelectContent>
@@ -303,7 +305,7 @@ const CataloguePublic = () => {
             </Select>
 
             <Select value={selectedSousCategorie} onValueChange={setSelectedSousCategorie}>
-              <SelectTrigger className="border-blue-200">
+              <SelectTrigger className={theme.borderInput}>
                 <SelectValue placeholder="Sous-catégorie" />
               </SelectTrigger>
               <SelectContent>
@@ -315,7 +317,7 @@ const CataloguePublic = () => {
             </Select>
 
             <Select value={selectedEtat} onValueChange={setSelectedEtat} data-testid="etat-filter">
-              <SelectTrigger className="border-blue-200">
+              <SelectTrigger className={theme.borderInput}>
                 <SelectValue placeholder="État" />
               </SelectTrigger>
               <SelectContent>
@@ -333,8 +335,8 @@ const CataloguePublic = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
         {catalogueWithPubs.length === 0 ? (
           <div className="text-center py-20" data-testid="empty-catalogue">
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <span className="text-4xl font-bold text-blue-700">B</span>
+            <div className={`w-24 h-24 bg-gradient-to-br ${theme.bg100} ${theme.bg200} rounded-2xl flex items-center justify-center mx-auto mb-6`}>
+              <span className={`text-4xl font-bold ${theme.text700}`}>B</span>
             </div>
             <h2 className="text-3xl font-bold text-gray-800 mb-2">BMS Inventory</h2>
             <p className="text-gray-600">Pas encore d'objets en vente</p>
@@ -346,11 +348,11 @@ const CataloguePublic = () => {
                 return (
                   <div
                     key={`${item.type}-${index}`}
-                    className="glass rounded-2xl overflow-hidden shadow-md hover-lift cursor-pointer border-4 border-blue-500"
+                    className={`glass rounded-2xl overflow-hidden shadow-md hover-lift cursor-pointer border-4 ${theme.border500}`}
                     onClick={() => setSelectedPub(item.data)}
                     data-testid={`${item.type}-${index}`}
                   >
-                    <div className="relative aspect-square bg-gradient-to-br from-blue-100 to-blue-200">
+                    <div className={`relative aspect-square bg-gradient-to-br ${theme.bg100} ${theme.bg200}`}>
                       {item.data.image ? (
                         <LazyLoadImage
                           src={item.data.image}
@@ -360,7 +362,7 @@ const CataloguePublic = () => {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <span className="text-4xl font-bold text-blue-400">B</span>
+                          <span className={`text-4xl font-bold ${theme.text400}`}>B</span>
                         </div>
                       )}
                       <div className="absolute top-3 right-3 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg uppercase">
@@ -368,7 +370,7 @@ const CataloguePublic = () => {
                       </div>
                     </div>
                     <div className="p-4">
-                      <h3 className="font-bold text-blue-900 mb-2">{item.data.nom}</h3>
+                      <h3 className={`font-bold ${theme.text} mb-2`}>{item.data.nom}</h3>
                       {item.data.description && (
                         <p className="text-sm text-gray-600 line-clamp-2">{item.data.description}</p>
                       )}
@@ -421,7 +423,7 @@ const CataloguePublic = () => {
                     <div className="flex items-center justify-between mt-3">
                       <div>
                         {article.prix_vente && (
-                          <p className="text-xl font-bold text-blue-600">{article.prix_vente}€</p>
+                          <p className={`text-xl font-bold ${theme.textLight}`}>{article.prix_vente}€</p>
                         )}
                         {article.prix_neuf && article.prix_neuf !== article.prix_vente && (
                           <p className="text-sm text-gray-500 line-through">{article.prix_neuf}€</p>
@@ -429,7 +431,7 @@ const CataloguePublic = () => {
                       </div>
                       <Button
                         size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                        className={`${theme.bg} ${theme.bgHover} text-white disabled:opacity-50`}
                         onClick={(e) => addToPanier(article, e)}
                         disabled={!article.quantite || article.quantite <= 0}
                       >
@@ -451,7 +453,7 @@ const CataloguePublic = () => {
           {selectedArticle && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-2xl text-blue-900">{selectedArticle.nom}</DialogTitle>
+                <DialogTitle className={`text-2xl ${theme.text}`}>{selectedArticle.nom}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 {selectedArticle.photos && selectedArticle.photos.length > 0 && (
@@ -495,7 +497,7 @@ const CataloguePublic = () => {
                 <div className="flex items-center justify-between pt-4 border-t">
                   <div>
                     {selectedArticle.prix_vente && (
-                      <p className="text-3xl font-bold text-blue-600">{selectedArticle.prix_vente}€</p>
+                      <p className={`text-3xl font-bold ${theme.textLight}`}>{selectedArticle.prix_vente}€</p>
                     )}
                     {selectedArticle.prix_neuf && selectedArticle.prix_neuf !== selectedArticle.prix_vente && (
                       <div className="flex items-center space-x-2">
@@ -510,7 +512,7 @@ const CataloguePublic = () => {
                   </div>
                   <div className="flex gap-2">
                     <Button
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      className={`${theme.bg} ${theme.bgHover} text-white`}
                       onClick={(e) => {
                         e.stopPropagation();
                         addToPanier(selectedArticle, { stopPropagation: () => {} });
@@ -542,7 +544,7 @@ const CataloguePublic = () => {
       {panier.length > 0 && (
         <div className="fixed bottom-6 right-6 z-50">
           <Button
-            className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg rounded-full px-6 py-3 flex items-center gap-2"
+            className={`${theme.bg} ${theme.bgHover} text-white shadow-lg rounded-full px-6 py-3 flex items-center gap-2`}
             onClick={() => setShowPanier(true)}
           >
             <ShoppingCart className="w-5 h-5" />
@@ -557,7 +559,7 @@ const CataloguePublic = () => {
       <Dialog open={showPanier} onOpenChange={setShowPanier}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl text-blue-900">Mon Panier</DialogTitle>
+            <DialogTitle className={`text-2xl ${theme.text}`}>Mon Panier</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             {panier.length === 0 ? (
@@ -569,7 +571,7 @@ const CataloguePublic = () => {
                     <div className="flex-1">
                       <h4 className="font-bold text-gray-900">{item.nom}</h4>
                       {item.ref && <p className="text-sm text-gray-600">Réf: {item.ref}</p>}
-                      <p className="text-lg font-bold text-blue-600 mt-1">{item.prix_vente}€ × {item.quantite} = {(item.prix_vente * item.quantite).toFixed(2)}€</p>
+                      <p className={`text-lg font-bold ${theme.textLight} mt-1`}>{item.prix_vente}€ × {item.quantite} = {(item.prix_vente * item.quantite).toFixed(2)}€</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
@@ -605,7 +607,7 @@ const CataloguePublic = () => {
                 <div className="border-t pt-4 mt-4">
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-xl font-bold">Total:</span>
-                    <span className="text-2xl font-bold text-blue-600">{calculerTotal().toFixed(2)}€</span>
+                    <span className={`text-2xl font-bold ${theme.textLight}`}>{calculerTotal().toFixed(2)}€</span>
                   </div>
                   <Button
                     className="w-full bg-green-600 hover:bg-green-700 text-white py-3"
@@ -625,7 +627,7 @@ const CataloguePublic = () => {
       <Dialog open={!!commandeValidee} onOpenChange={() => setCommandeValidee(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-2xl text-center text-blue-900">Commande validée !</DialogTitle>
+            <DialogTitle className={`text-2xl text-center ${theme.text}`}>Commande validée !</DialogTitle>
           </DialogHeader>
           <div className="bg-white border-2 border-gray-300 rounded-lg p-6 mt-4 font-mono">
             <div className="text-center mb-4">
@@ -652,7 +654,7 @@ const CataloguePublic = () => {
             </div>
             <div className="text-center mt-4 pt-4 border-t">
               <p className="text-xs text-gray-600 mb-2">Conservez ce numéro de commande</p>
-              <p className="text-lg font-bold text-blue-600">#{commandeValidee?.numero}</p>
+              <p className={`text-lg font-bold ${theme.textLight}`}>#{commandeValidee?.numero}</p>
             </div>
           </div>
           {settings.tel_commande && (
@@ -673,7 +675,7 @@ const CataloguePublic = () => {
           {selectedPub && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-2xl text-blue-900">{selectedPub.nom}</DialogTitle>
+                <DialogTitle className={`text-2xl ${theme.text}`}>{selectedPub.nom}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 {selectedPub.image && (
@@ -690,7 +692,7 @@ const CataloguePublic = () => {
                   <div className="border-t pt-4">
                     <p className="text-gray-700 mb-3">Vous voulez afficher votre annonce ?</p>
                     <Button
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      className={`${theme.bg} ${theme.bgHover} text-white`}
                       onClick={() => window.location.href = `tel:${settings.tel_pub}`}
                     >
                       <Phone className="w-4 h-4 mr-2" />

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../App';
 import Layout from '../components/Layout';
+import { useTheme } from '../hooks/useTheme';
 import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, Plus, Check, Trash2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -15,6 +16,7 @@ const API = `${BACKEND_URL}/api`;
 
 const Dashboard = () => {
   const { user, socket } = useContext(AuthContext);
+  const { theme } = useTheme();
   const [memo, setMemo] = useState('');
   const [todos, setTodos] = useState([]);
   const [newTodo, setNewTodo] = useState('');
@@ -189,7 +191,7 @@ const Dashboard = () => {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">Dashboard</h1>
           <div className="text-sm text-gray-600">
-            Bonjour, <span className="font-semibold text-blue-600">{user?.username}</span>
+            Bonjour, <span className={`font-semibold ${theme.textLight}`}>{user?.username}</span>
           </div>
         </div>
 
@@ -201,7 +203,7 @@ const Dashboard = () => {
               value={memo}
               onChange={(e) => handleMemoChange(e.target.value)}
               placeholder="Écrivez vos notes ici..."
-              className="min-h-[300px] border-blue-200 focus:border-blue-400 resize-none"
+              className={`min-h-[300px] ${theme.borderInput} ${theme.focus} resize-none`}
               data-testid="memo-textarea"
             />
           </div>
@@ -212,7 +214,7 @@ const Dashboard = () => {
               <h2 className="text-xl font-bold text-gray-900">Post-it équipe</h2>
               <Button
                 size="sm"
-                className="bg-blue-600 hover:bg-blue-700"
+                className={`${theme.bg} ${theme.bgHover}`}
                 onClick={() => setShowPostitForm(!showPostitForm)}
                 data-testid="new-postit-button"
               >
@@ -226,14 +228,14 @@ const Dashboard = () => {
                   placeholder="Objet"
                   value={newPostit.objet}
                   onChange={(e) => setNewPostit({ ...newPostit, objet: e.target.value })}
-                  className="border-blue-200"
+                  className={theme.borderInput}
                   data-testid="postit-objet-input"
                 />
                 <Textarea
                   placeholder="Message"
                   value={newPostit.message}
                   onChange={(e) => setNewPostit({ ...newPostit, message: e.target.value })}
-                  className="border-blue-200"
+                  className={theme.borderInput}
                   data-testid="postit-message-input"
                 />
                 <input
@@ -370,7 +372,7 @@ const Dashboard = () => {
               />
               <Button
                 onClick={addTodo}
-                className="bg-blue-600 hover:bg-blue-700"
+                className={`${theme.bg} ${theme.bgHover}`}
                 data-testid="todo-add-button"
               >
                 <Plus className="w-4 h-4" />
@@ -386,9 +388,9 @@ const Dashboard = () => {
                 <p className="text-gray-500 text-sm">Aucun événement prévu</p>
               ) : (
                 agendaEvents.map((event) => (
-                  <div key={event.id} className="bg-blue-50 p-3 rounded-xl" data-testid={`agenda-event-${event.id}`}>
+                  <div key={event.id} className={`${theme.bgLight} p-3 rounded-xl`} data-testid={`agenda-event-${event.id}`}>
                     <h3 className="font-semibold text-gray-900">{event.titre}</h3>
-                    <p className="text-sm text-blue-600">
+                    <p className={`text-sm ${theme.textLight}`}>
                       {new Date(event.date).toLocaleDateString('fr-FR', {
                         weekday: 'long',
                         year: 'numeric',
