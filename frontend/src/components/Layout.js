@@ -2,6 +2,7 @@ import React, { useContext, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../App';
 import { Logo } from '../hooks/useLogo';
+import { useTheme } from '../hooks/useTheme';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -34,6 +35,68 @@ const Layout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { themeColor } = useTheme();
+
+  const themeClasses = {
+    blue: {
+      bg: 'from-blue-50 via-white to-gray-50',
+      border: 'border-blue-100',
+      text: 'text-blue-900',
+      button: 'bg-blue-600 text-white hover:bg-blue-700',
+      hover: 'hover:bg-blue-50',
+    },
+    green: {
+      bg: 'from-green-50 via-white to-gray-50',
+      border: 'border-green-100',
+      text: 'text-green-900',
+      button: 'bg-green-600 text-white hover:bg-green-700',
+      hover: 'hover:bg-green-50',
+    },
+    red: {
+      bg: 'from-red-50 via-white to-gray-50',
+      border: 'border-red-100',
+      text: 'text-red-900',
+      button: 'bg-red-600 text-white hover:bg-red-700',
+      hover: 'hover:bg-red-50',
+    },
+    purple: {
+      bg: 'from-purple-50 via-white to-gray-50',
+      border: 'border-purple-100',
+      text: 'text-purple-900',
+      button: 'bg-purple-600 text-white hover:bg-purple-700',
+      hover: 'hover:bg-purple-50',
+    },
+    orange: {
+      bg: 'from-orange-50 via-white to-gray-50',
+      border: 'border-orange-100',
+      text: 'text-orange-900',
+      button: 'bg-orange-600 text-white hover:bg-orange-700',
+      hover: 'hover:bg-orange-50',
+    },
+    teal: {
+      bg: 'from-teal-50 via-white to-gray-50',
+      border: 'border-teal-100',
+      text: 'text-teal-900',
+      button: 'bg-teal-600 text-white hover:bg-teal-700',
+      hover: 'hover:bg-teal-50',
+    },
+    pink: {
+      bg: 'from-pink-50 via-white to-gray-50',
+      border: 'border-pink-100',
+      text: 'text-pink-900',
+      button: 'bg-pink-600 text-white hover:bg-pink-700',
+      hover: 'hover:bg-pink-50',
+    },
+    indigo: {
+      bg: 'from-indigo-50 via-white to-gray-50',
+      border: 'border-indigo-100',
+      text: 'text-indigo-900',
+      button: 'bg-indigo-600 text-white hover:bg-indigo-700',
+      hover: 'hover:bg-indigo-50',
+    },
+  };
+
+  const theme = themeClasses[themeColor] || themeClasses.blue;
 
   const handleLogout = () => {
     logout();
@@ -61,15 +124,15 @@ const Layout = ({ children }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50">
+    <div className={`min-h-screen bg-gradient-to-br ${theme.bg}`}>
       {/* Header */}
-      <header className="glass sticky top-0 z-50 border-b border-blue-100">
+      <header className={`glass sticky top-0 z-50 border-b ${theme.border}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/dashboard" className="flex items-center space-x-3" data-testid="logo-link">
               <Logo size="sm" />
-              <span className="text-xl font-bold text-blue-900">BMS Inventory</span>
+              <span className={`text-xl font-bold ${theme.text}`}>BMS Inventory</span>
             </Link>
 
             {/* Navigation Desktop */}
@@ -86,8 +149,8 @@ const Layout = ({ children }) => {
                       variant={isActive(item.path) ? 'default' : 'ghost'}
                       className={`${
                         isActive(item.path)
-                          ? 'bg-blue-600 text-white hover:bg-blue-700'
-                          : 'text-gray-700 hover:bg-blue-50'
+                          ? theme.button
+                          : `text-gray-700 ${theme.hover}`
                       }`}
                     >
                       <Icon className="w-4 h-4 mr-2" />
@@ -120,8 +183,8 @@ const Layout = ({ children }) => {
                             variant={isActive(item.path) ? 'default' : 'ghost'}
                             className={`w-full justify-start ${
                               isActive(item.path)
-                                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                : 'text-gray-700 hover:bg-blue-50'
+                                ? theme.button
+                                : `text-gray-700 ${theme.hover}`
                             }`}
                           >
                             <Icon className="w-4 h-4 mr-2" />

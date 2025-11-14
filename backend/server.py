@@ -166,6 +166,7 @@ class Settings(BaseModel):
     tel_commande: Optional[str] = None
     tel_pub: Optional[str] = None
     logo: Optional[str] = None
+    theme_color: Optional[str] = 'blue'  # blue, green, red, purple, orange, teal, pink, indigo
 
 class TodoItem(BaseModel):
     text: str
@@ -276,7 +277,8 @@ async def startup_event():
     if not settings:
         await db.settings.insert_one({
             'tel_commande': None,
-            'tel_pub': None
+            'tel_pub': None,
+            'theme_color': 'blue'
         })
 
 # WebSocket endpoint
@@ -659,7 +661,9 @@ async def delete_pub(pub_id: str, user_data: dict = Depends(verify_token)):
 async def get_settings():
     settings = await db.settings.find_one({}, {'_id': 0})
     if not settings:
-        return {'tel_commande': None, 'tel_pub': None}
+        return {'tel_commande': None, 'tel_pub': None, 'theme_color': 'blue'}
+    if 'theme_color' not in settings:
+        settings['theme_color'] = 'blue'
     return settings
 
 @api_router.put("/settings")

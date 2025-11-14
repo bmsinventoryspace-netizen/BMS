@@ -4,8 +4,9 @@ import Layout from '../../components/Layout';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Label } from '../../components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { toast } from 'sonner';
-import { Upload, Image as ImageIcon } from 'lucide-react';
+import { Upload, Image as ImageIcon, Palette } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -53,10 +54,13 @@ const AdminLogo = () => {
     try {
       await axios.put(`${API}/settings`, {
         ...settings,
-        logo: logoPreview
+        logo: logoPreview,
+        theme_color: settings.theme_color || 'blue'
       });
-      toast.success('Logo mis à jour !');
+      toast.success('Paramètres mis à jour !');
       fetchSettings();
+      // Recharger la page pour appliquer le nouveau thème
+      setTimeout(() => window.location.reload(), 1000);
     } catch (error) {
       toast.error('Erreur lors de la mise à jour');
       console.error(error);
@@ -64,6 +68,33 @@ const AdminLogo = () => {
       setLoading(false);
     }
   };
+
+  const handleThemeChange = async (color) => {
+    setSettings({ ...settings, theme_color: color });
+    try {
+      await axios.put(`${API}/settings`, {
+        ...settings,
+        theme_color: color
+      });
+      toast.success('Couleur du thème mise à jour !');
+      // Recharger la page pour appliquer le nouveau thème
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (error) {
+      toast.error('Erreur lors de la mise à jour');
+      console.error(error);
+    }
+  };
+
+  const themeColors = [
+    { value: 'blue', label: 'Bleu', class: 'bg-blue-600' },
+    { value: 'green', label: 'Vert', class: 'bg-green-600' },
+    { value: 'red', label: 'Rouge', class: 'bg-red-600' },
+    { value: 'purple', label: 'Violet', class: 'bg-purple-600' },
+    { value: 'orange', label: 'Orange', class: 'bg-orange-600' },
+    { value: 'teal', label: 'Sarcelle', class: 'bg-teal-600' },
+    { value: 'pink', label: 'Rose', class: 'bg-pink-600' },
+    { value: 'indigo', label: 'Indigo', class: 'bg-indigo-600' },
+  ];
 
   const handleReset = () => {
     setLogoPreview(null);
@@ -73,11 +104,61 @@ const AdminLogo = () => {
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">Personnalisation du Logo</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">Personnalisation</h1>
           <p className="text-gray-600 mt-2">
-            Téléchargez votre logo personnalisé pour remplacer le "B" par défaut
+            Personnalisez le logo et les couleurs de votre application
           </p>
         </div>
+
+        {/* Sélecteur de couleur */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="w-5 h-5" />
+              Couleur du thème
+            </CardTitle>
+            <CardDescription>
+              Choisissez la couleur principale de votre application
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <Label>Couleur actuelle</Label>
+                <Select 
+                  value={settings.theme_color || 'blue'} 
+                  onValueChange={handleThemeChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {themeColors.map(color => (
+                      <SelectItem key={color.value} value={color.value}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded-full ${color.class}`}></div>
+                          {color.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {themeColors.map(color => (
+                  <button
+                    key={color.value}
+                    onClick={() => handleThemeChange(color.value)}
+                    className={`w-12 h-12 rounded-lg ${color.class} hover:opacity-80 transition-opacity ${
+                      (settings.theme_color || 'blue') === color.value ? 'ring-4 ring-offset-2 ring-gray-400' : ''
+                    }`}
+                    title={color.label}
+                  />
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Upload Card */}
