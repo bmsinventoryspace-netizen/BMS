@@ -44,31 +44,47 @@ const AdminBackup = () => {
         responseType: 'blob'
       });
 
-      // Créer un lien de téléchargement
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      // Vérifier si la réponse est valide
+      if (!response.data) {
+        throw new Error('Réponse vide du serveur');
+      }
+
+      // Créer un blob avec le type correct
+      const blob = new Blob([response.data], { type: 'application/json;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       
       // Extraire le nom du fichier depuis les headers
       const contentDisposition = response.headers['content-disposition'];
-      let filename = `bms_backup_${new Date().toISOString().split('T')[0]}.json`;
+      let filename = `bms_backup_${new Date().toISOString().split('T')[0].replace(/-/g, '')}.json`;
+      
       if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
-        if (filenameMatch) {
-          filename = filenameMatch[1];
+        // Gérer les différents formats de Content-Disposition
+        const filenameMatch = contentDisposition.match(/filename\*=UTF-8''(.+)/) || 
+                             contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = decodeURIComponent(filenameMatch[1]);
         }
       }
       
       link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      
+      // Nettoyer après un court délai
+      setTimeout(() => {
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      }, 100);
 
       toast.success('Sauvegarde téléchargée avec succès !');
     } catch (error) {
       console.error('Error downloading backup:', error);
-      toast.error('Erreur lors du téléchargement de la sauvegarde');
+      const errorMessage = error.response?.data?.detail || 
+                          error.message || 
+                          'Erreur lors du téléchargement de la sauvegarde';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

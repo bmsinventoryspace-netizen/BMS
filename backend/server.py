@@ -1,6 +1,6 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse, Response
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -877,12 +877,12 @@ async def create_backup(user_data: dict = Depends(verify_token)):
         # Créer un nom de fichier avec la date
         filename = f"bms_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         
-        # Retourner le fichier JSON
-        return StreamingResponse(
-            iter([json_str]),
-            media_type="application/json",
+        # Retourner le fichier JSON en utilisant Response avec encodage UTF-8
+        return Response(
+            content=json_str.encode('utf-8'),
+            media_type="application/json; charset=utf-8",
             headers={
-                "Content-Disposition": f"attachment; filename={filename}"
+                "Content-Disposition": f"attachment; filename*=UTF-8''{filename}"
             }
         )
     except Exception as e:
