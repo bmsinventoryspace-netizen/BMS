@@ -436,10 +436,14 @@ const Inventaire = () => {
                       type="file"
                       multiple
                       accept="image/*"
+                      capture="environment"
                       onChange={handleImageUpload}
                       className="w-full border border-gray-300 rounded-md p-2"
                       data-testid="photo-input"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Sur mobile : vous pouvez prendre une photo directement ou choisir depuis la galerie
+                    </p>
                     {photos.length > 0 && (
                       <div className="grid grid-cols-4 gap-2 mt-2">
                         {photos.map((photo, idx) => (
@@ -495,6 +499,51 @@ const Inventaire = () => {
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       data-testid="description-input"
                     />
+                  </div>
+
+                  {/* Marque - disponible pour pièces et liquides */}
+                  <div>
+                    <Label>Marque</Label>
+                    {!showNewMarqueInput ? (
+                      <Select 
+                        value={formData.marque} 
+                        onValueChange={handleMarqueChange}
+                        data-testid="marque-select"
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner une marque" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {marques.map(marque => (
+                            <SelectItem key={marque} value={marque}>{marque}</SelectItem>
+                          ))}
+                          <SelectItem value="__new__" className={`${theme.textLight} font-semibold`}>
+                            + Nouvelle marque
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="flex space-x-2">
+                        <Input
+                          value={newMarqueName}
+                          onChange={(e) => setNewMarqueName(e.target.value)}
+                          placeholder="Nom de la nouvelle marque"
+                          onKeyPress={(e) => e.key === 'Enter' && handleNewMarqueConfirm()}
+                          autoFocus
+                        />
+                        <Button type="button" size="sm" onClick={handleNewMarqueConfirm}>
+                          ✓
+                        </Button>
+                        <Button 
+                          type="button" 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => setShowNewMarqueInput(false)}
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   {articleType === 'piece' && (
@@ -570,50 +619,7 @@ const Inventaire = () => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                          <Label>Marque</Label>
-                          {!showNewMarqueInput ? (
-                            <Select 
-                              value={formData.marque} 
-                              onValueChange={handleMarqueChange}
-                              data-testid="marque-select"
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Sélectionner une marque" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {marques.map(marque => (
-                                  <SelectItem key={marque} value={marque}>{marque}</SelectItem>
-                                ))}
-                                <SelectItem value="__new__" className={`${theme.textLight} font-semibold`}>
-                                  + Nouvelle marque
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <div className="flex space-x-2">
-                              <Input
-                                value={newMarqueName}
-                                onChange={(e) => setNewMarqueName(e.target.value)}
-                                placeholder="Nom de la nouvelle marque"
-                                onKeyPress={(e) => e.key === 'Enter' && handleNewMarqueConfirm()}
-                                autoFocus
-                              />
-                              <Button type="button" size="sm" onClick={handleNewMarqueConfirm}>
-                                ✓
-                              </Button>
-                              <Button 
-                                type="button" 
-                                size="sm" 
-                                variant="outline" 
-                                onClick={() => setShowNewMarqueInput(false)}
-                              >
-                                ✕
-                              </Button>
-                            </div>
-                          )}
-                        </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <Label>Viscosité</Label>
                           <Input
@@ -1252,10 +1258,20 @@ const Inventaire = () => {
                 )}
 
                 {/* Info spécifiques pièces */}
-                {selectedArticleView.type === 'piece' && selectedArticleView.quantite && (
-                  <div className="bg-gray-50 p-4 rounded-xl">
-                    <p className="text-xs text-gray-600 mb-1">Quantité en stock</p>
-                    <p className="font-semibold text-gray-900 text-lg">{selectedArticleView.quantite} unité(s)</p>
+                {selectedArticleView.type === 'piece' && (
+                  <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${theme.bgLight} p-4 rounded-xl`}>
+                    {selectedArticleView.marque && (
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Marque</p>
+                        <p className="font-semibold text-gray-900">{selectedArticleView.marque}</p>
+                      </div>
+                    )}
+                    {selectedArticleView.quantite && (
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Quantité en stock</p>
+                        <p className="font-semibold text-gray-900 text-lg">{selectedArticleView.quantite} unité(s)</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
