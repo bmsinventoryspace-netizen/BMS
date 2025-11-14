@@ -1,6 +1,6 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -842,6 +842,92 @@ async def update_commande_statut(commande_id: str, statut_data: CommandeStatutUp
     })
     
     return {'message': 'Statut mis à jour'}
+
+# Backup system
+@api_router.get("/backup")
+async def create_backup(user_data: dict = Depends(verify_token)):
+    """Créer une sauvegarde complète de toutes les données (admin seulement)"""
+    if user_data['role'] != 'admin':
+        raise HTTPException(status_code=403, detail='Admin only')
+    
+    try:
+        # Récupérer toutes les données
+        backup_data = {
+            'metadata': {
+                'backup_date': datetime.now(timezone.utc).isoformat(),
+                'backup_version': '1.0',
+                'created_by': user_data['username'],
+                'database_name': os.environ.get('DB_NAME', 'bms_inventory')
+            },
+            'articles': await db.articles.find({}, {'_id': 0}).to_list(100000),
+            'users': await db.users.find({}, {'_id': 0, 'password': 0}).to_list(1000),  # Exclure les mots de passe
+            'settings': await db.settings.find_one({}, {'_id': 0}) or {},
+            'commandes': await db.commandes.find({}, {'_id': 0}).to_list(10000),
+            'postits': await db.postits.find({}, {'_id': 0}).to_list(10000),
+            'agenda': await db.agenda.find({}, {'_id': 0}).to_list(10000),
+            'pubs': await db.pubs.find({}, {'_id': 0}).to_list(10000),
+            'article_stats': await db.article_stats.find({}, {'_id': 0}).to_list(100000),
+            'memos': await db.memos.find({}, {'_id': 0}).to_list(1000),
+            'todos': await db.todos.find({}, {'_id': 0}).to_list(1000)
+        }
+        
+        # Convertir en JSON
+        json_str = json.dumps(backup_data, indent=2, ensure_ascii=False, default=str)
+        
+        # Créer un nom de fichier avec la date
+        filename = f"bms_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        
+        # Retourner le fichier JSON
+        return StreamingResponse(
+            iter([json_str]),
+            media_type="application/json",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error creating backup: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la création de la sauvegarde: {str(e)}")
+
+@api_router.get("/backup/info")
+async def get_backup_info(user_data: dict = Depends(verify_token)):
+    """Obtenir des informations sur les données à sauvegarder (admin seulement)"""
+    if user_data['role'] != 'admin':
+        raise HTTPException(status_code=403, detail='Admin only')
+    
+    try:
+        counts = {
+            'articles': await db.articles.count_documents({}),
+            'users': await db.users.count_documents({}),
+            'commandes': await db.commandes.count_documents({}),
+            'postits': await db.postits.count_documents({}),
+            'agenda_events': await db.agenda.count_documents({}),
+            'pubs': await db.pubs.count_documents({}),
+            'stats': await db.article_stats.count_documents({})
+        }
+        
+        # Calculer la taille approximative
+        sample_article = await db.articles.find_one({}, {'_id': 0})
+        avg_article_size = len(json.dumps(sample_article, default=str)) if sample_article else 1000
+        
+        estimated_size = (
+            counts['articles'] * avg_article_size +
+            counts['users'] * 200 +
+            counts['commandes'] * 500 +
+            counts['postits'] * 300 +
+            counts['agenda_events'] * 200 +
+            counts['pubs'] * 500 +
+            counts['stats'] * 100
+        )
+        
+        return {
+            'counts': counts,
+            'estimated_size_mb': round(estimated_size / (1024 * 1024), 2),
+            'last_backup': None  # On pourrait stocker ça dans les settings
+        }
+    except Exception as e:
+        logger.error(f"Error getting backup info: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
 
 app.include_router(api_router)
 

@@ -28,6 +28,7 @@ import {
   TrendingUp,
   ShoppingCart,
   Receipt,
+  Database,
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -121,6 +122,7 @@ const Layout = ({ children }) => {
     { path: '/admin/numeros', label: 'Numéros', icon: Phone },
     { path: '/admin/employes', label: 'Employés', icon: Users },
     { path: '/admin/logo', label: 'Logo', icon: Settings },
+    { path: '/admin/backup', label: 'Sauvegarde', icon: Database },
   ];
 
   return (
