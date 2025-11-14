@@ -26,6 +26,7 @@ import {
   Menu,
   TrendingUp,
   ShoppingCart,
+  Receipt,
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -52,6 +53,7 @@ const Layout = ({ children }) => {
   ];
 
   const adminItems = [
+    { path: '/admin/commandes', label: 'Commandes', icon: Receipt },
     { path: '/admin/pubs', label: 'Pubs & Offres', icon: MessageSquare },
     { path: '/admin/numeros', label: 'Numéros', icon: Phone },
     { path: '/admin/employes', label: 'Employés', icon: Users },

@@ -174,6 +174,29 @@ class TodoItem(BaseModel):
 class MemoUpdate(BaseModel):
     content: str
 
+class CommandeItem(BaseModel):
+    article_id: int
+    nom: str
+    ref: Optional[str] = None
+    prix_vente: float
+    quantite: int
+
+class CommandeCreate(BaseModel):
+    items: List[CommandeItem]
+    total: float
+
+class Commande(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    numero: str
+    items: List[CommandeItem]
+    total: float
+    date: str
+    statut: str = "en_attente"  # en_attente, validee, annulee
+
+class CommandeStatutUpdate(BaseModel):
+    statut: str
+
 # Helper functions
 def create_token(username: str, role: str) -> str:
     payload = {
@@ -736,6 +759,85 @@ async def get_article_stats(user_data: dict = Depends(verify_token)):
     # Sort by views descending
     result.sort(key=lambda x: x['views'], reverse=True)
     return result
+
+# Commandes
+@api_router.post("/commandes")
+async def create_commande(commande: CommandeCreate):
+    """Créer une nouvelle commande depuis le catalogue public"""
+    # Générer un numéro unique
+    year = datetime.now(timezone.utc).year
+    last_commande = await db.commandes.find_one(
+        {'numero': {'$regex': f'^CMD-{year}-'}},
+        sort=[('numero', -1)]
+    )
+    if last_commande:
+        last_num = int(last_commande['numero'].split('-')[-1])
+        next_num = last_num + 1
+    else:
+        next_num = 1
+    numero = f'CMD-{year}-{next_num:04d}'
+    
+    commande_id = str(uuid.uuid4())
+    commande_data = {
+        'id': commande_id,
+        'numero': numero,
+        'items': [item.model_dump() for item in commande.items],
+        'total': commande.total,
+        'date': datetime.now(timezone.utc).isoformat(),
+        'statut': 'en_attente'
+    }
+    
+    await db.commandes.insert_one(commande_data)
+    
+    # Notifier les admins via WebSocket
+    await broadcast_notification({
+        'type': 'commande_created',
+        'data': {'numero': numero, 'total': commande.total}
+    })
+    
+    return {'id': commande_id, 'numero': numero, 'message': 'Commande créée avec succès'}
+
+@api_router.get("/commandes", response_model=List[Commande])
+async def get_commandes(user_data: dict = Depends(verify_token)):
+    """Récupérer toutes les commandes (admin seulement)"""
+    if user_data['role'] != 'admin':
+        raise HTTPException(status_code=403, detail='Admin only')
+    
+    commandes = await db.commandes.find({}, {'_id': 0}).sort('date', -1).to_list(1000)
+    return commandes
+
+@api_router.get("/commandes/{commande_id}", response_model=Commande)
+async def get_commande(commande_id: str, user_data: dict = Depends(verify_token)):
+    """Récupérer une commande spécifique (admin seulement)"""
+    if user_data['role'] != 'admin':
+        raise HTTPException(status_code=403, detail='Admin only')
+    
+    commande = await db.commandes.find_one({'id': commande_id}, {'_id': 0})
+    if not commande:
+        raise HTTPException(status_code=404, detail='Commande not found')
+    return commande
+
+@api_router.put("/commandes/{commande_id}/statut")
+async def update_commande_statut(commande_id: str, statut_data: CommandeStatutUpdate, user_data: dict = Depends(verify_token)):
+    """Mettre à jour le statut d'une commande (admin seulement)"""
+    if user_data['role'] != 'admin':
+        raise HTTPException(status_code=403, detail='Admin only')
+    
+    statut = statut_data.statut
+    if statut not in ['en_attente', 'validee', 'annulee']:
+        raise HTTPException(status_code=400, detail='Statut invalide')
+    
+    await db.commandes.update_one(
+        {'id': commande_id},
+        {'$set': {'statut': statut}}
+    )
+    
+    await broadcast_notification({
+        'type': 'commande_updated',
+        'data': {'id': commande_id, 'statut': statut}
+    })
+    
+    return {'message': 'Statut mis à jour'}
 
 app.include_router(api_router)
 

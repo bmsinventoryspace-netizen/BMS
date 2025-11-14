@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { Logo } from '../hooks/useLogo';
 import ServerWakeup from '../components/ServerWakeup';
-import { Search, Phone, Filter } from 'lucide-react';
+import { Search, Phone, Filter, ShoppingCart, Plus, Minus, X, Check } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -26,6 +26,9 @@ const CataloguePublic = () => {
   const [categories, setCategories] = useState([]);
   const [selectedPub, setSelectedPub] = useState(null);
   const [serverReady, setServerReady] = useState(false);
+  const [panier, setPanier] = useState([]);
+  const [showPanier, setShowPanier] = useState(false);
+  const [commandeValidee, setCommandeValidee] = useState(null);
 
   const etats = ['Comme neuf', 'Très bon état', 'Bon état', 'État acceptable', 'Usé', 'Mauvais état', 'Très mauvais état'];
 
@@ -103,6 +106,69 @@ const CataloguePublic = () => {
     if (!prix_vente || !prix_neuf || prix_neuf === 0 || prix_vente >= prix_neuf) return null;
     const discount = ((prix_neuf - prix_vente) / prix_neuf) * 100;
     return discount > 0 ? Math.round(discount) : null;
+  };
+
+  const addToPanier = (article, e) => {
+    e.stopPropagation();
+    const existing = panier.find(item => item.article_id === article.id);
+    if (existing) {
+      setPanier(panier.map(item => 
+        item.article_id === article.id 
+          ? { ...item, quantite: item.quantite + 1 }
+          : item
+      ));
+    } else {
+      setPanier([...panier, {
+        article_id: article.id,
+        nom: article.nom,
+        ref: article.ref,
+        prix_vente: article.prix_vente || 0,
+        quantite: 1
+      }]);
+    }
+  };
+
+  const removeFromPanier = (articleId, e) => {
+    e.stopPropagation();
+    setPanier(panier.filter(item => item.article_id !== articleId));
+  };
+
+  const updateQuantite = (articleId, delta) => {
+    setPanier(panier.map(item => {
+      if (item.article_id === articleId) {
+        const newQuantite = item.quantite + delta;
+        if (newQuantite <= 0) return null;
+        return { ...item, quantite: newQuantite };
+      }
+      return item;
+    }).filter(Boolean));
+  };
+
+  const calculerTotal = () => {
+    return panier.reduce((total, item) => total + (item.prix_vente * item.quantite), 0);
+  };
+
+  const validerCommande = async () => {
+    if (panier.length === 0) return;
+    
+    try {
+      const total = calculerTotal();
+      const response = await axios.post(`${API}/commandes`, {
+        items: panier,
+        total: total
+      });
+      
+      setCommandeValidee({
+        numero: response.data.numero,
+        items: panier,
+        total: total
+      });
+      setPanier([]);
+      setShowPanier(false);
+    } catch (error) {
+      console.error('Erreur lors de la validation:', error);
+      alert('Erreur lors de la validation de la commande');
+    }
   };
 
   const insertPubsInCatalogue = () => {
@@ -291,6 +357,14 @@ const CataloguePublic = () => {
                           <p className="text-sm text-gray-500 line-through">{article.prix_neuf}€</p>
                         )}
                       </div>
+                      <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        onClick={(e) => addToPanier(article, e)}
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Ajouter
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -363,19 +437,157 @@ const CataloguePublic = () => {
                       </div>
                     )}
                   </div>
-                  {settings.tel_commande && (
+                  <div className="flex gap-2">
                     <Button
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                      onClick={() => window.location.href = `tel:${settings.tel_commande}`}
-                      data-testid="contact-button"
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addToPanier(selectedArticle, { stopPropagation: () => {} });
+                        setSelectedArticle(null);
+                      }}
                     >
-                      <Phone className="w-4 h-4 mr-2" />
-                      Contacter pour commander
+                      <Plus className="w-4 h-4 mr-2" />
+                      Ajouter au panier
                     </Button>
-                  )}
+                    {settings.tel_commande && (
+                      <Button
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        onClick={() => window.location.href = `tel:${settings.tel_commande}`}
+                        data-testid="contact-button"
+                      >
+                        <Phone className="w-4 h-4 mr-2" />
+                        Appeler
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Panier flottant */}
+      {panier.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <Button
+            className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg rounded-full px-6 py-3 flex items-center gap-2"
+            onClick={() => setShowPanier(true)}
+          >
+            <ShoppingCart className="w-5 h-5" />
+            <span className="font-bold">{panier.reduce((sum, item) => sum + item.quantite, 0)}</span>
+            <span className="hidden sm:inline">articles</span>
+            <span className="font-bold ml-2">{calculerTotal().toFixed(2)}€</span>
+          </Button>
+        </div>
+      )}
+
+      {/* Modal Panier */}
+      <Dialog open={showPanier} onOpenChange={setShowPanier}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl text-blue-900">Mon Panier</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            {panier.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">Votre panier est vide</p>
+            ) : (
+              <>
+                {panier.map((item) => (
+                  <div key={item.article_id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-900">{item.nom}</h4>
+                      {item.ref && <p className="text-sm text-gray-600">Réf: {item.ref}</p>}
+                      <p className="text-lg font-bold text-blue-600 mt-1">{item.prix_vente}€ × {item.quantite} = {(item.prix_vente * item.quantite).toFixed(2)}€</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => updateQuantite(item.article_id, -1)}
+                      >
+                        <Minus className="w-4 h-4" />
+                      </Button>
+                      <span className="font-bold w-8 text-center">{item.quantite}</span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => updateQuantite(item.article_id, 1)}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => removeFromPanier(item.article_id, e)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <div className="border-t pt-4 mt-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-xl font-bold">Total:</span>
+                    <span className="text-2xl font-bold text-blue-600">{calculerTotal().toFixed(2)}€</span>
+                  </div>
+                  <Button
+                    className="w-full bg-green-600 hover:bg-green-700 text-white py-3"
+                    onClick={validerCommande}
+                  >
+                    <Check className="w-5 h-5 mr-2" />
+                    Valider ma liste
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Ticket de caisse */}
+      <Dialog open={!!commandeValidee} onOpenChange={() => setCommandeValidee(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl text-center text-blue-900">Commande validée !</DialogTitle>
+          </DialogHeader>
+          <div className="bg-white border-2 border-gray-300 rounded-lg p-6 mt-4 font-mono">
+            <div className="text-center mb-4">
+              <h3 className="text-xl font-bold">BMS INVENTORY</h3>
+              <p className="text-sm text-gray-600">Ticket de caisse</p>
+            </div>
+            <div className="border-t border-b border-dashed border-gray-400 py-3 my-3">
+              <p className="text-center font-bold text-lg">Commande #{commandeValidee?.numero}</p>
+              <p className="text-center text-sm text-gray-600">{new Date().toLocaleString('fr-FR')}</p>
+            </div>
+            <div className="space-y-2 mb-3">
+              {commandeValidee?.items.map((item, idx) => (
+                <div key={idx} className="flex justify-between text-sm">
+                  <span>{item.nom} × {item.quantite}</span>
+                  <span>{(item.prix_vente * item.quantite).toFixed(2)}€</span>
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-gray-400 pt-2 mt-3">
+              <div className="flex justify-between font-bold text-lg">
+                <span>TOTAL:</span>
+                <span>{commandeValidee?.total.toFixed(2)}€</span>
+              </div>
+            </div>
+            <div className="text-center mt-4 pt-4 border-t">
+              <p className="text-xs text-gray-600 mb-2">Conservez ce numéro de commande</p>
+              <p className="text-lg font-bold text-blue-600">#{commandeValidee?.numero}</p>
+            </div>
+          </div>
+          {settings.tel_commande && (
+            <Button
+              className="w-full bg-green-600 hover:bg-green-700 text-white mt-4"
+              onClick={() => window.location.href = `tel:${settings.tel_commande}`}
+            >
+              <Phone className="w-5 h-5 mr-2" />
+              Appeler maintenant
+            </Button>
           )}
         </DialogContent>
       </Dialog>
