@@ -52,10 +52,14 @@ const AdminLogo = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
+      const token = localStorage.getItem('token');
       await axios.put(`${API}/settings`, {
-        ...settings,
-        logo: logoPreview,
+        tel_commande: settings.tel_commande || null,
+        tel_pub: settings.tel_pub || null,
+        logo: logoPreview || null,
         theme_color: settings.theme_color || 'blue'
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Paramètres mis à jour !');
       fetchSettings();
@@ -63,25 +67,30 @@ const AdminLogo = () => {
       setTimeout(() => window.location.reload(), 1000);
     } catch (error) {
       toast.error('Erreur lors de la mise à jour');
-      console.error(error);
+      console.error('Erreur détaillée:', error.response?.data || error.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleThemeChange = async (color) => {
-    setSettings({ ...settings, theme_color: color });
     try {
+      const token = localStorage.getItem('token');
       await axios.put(`${API}/settings`, {
-        ...settings,
+        tel_commande: settings.tel_commande || null,
+        tel_pub: settings.tel_pub || null,
+        logo: settings.logo || null,
         theme_color: color
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
+      setSettings({ ...settings, theme_color: color });
       toast.success('Couleur du thème mise à jour !');
       // Recharger la page pour appliquer le nouveau thème
       setTimeout(() => window.location.reload(), 1000);
     } catch (error) {
       toast.error('Erreur lors de la mise à jour');
-      console.error(error);
+      console.error('Erreur détaillée:', error.response?.data || error.message);
     }
   };
 
