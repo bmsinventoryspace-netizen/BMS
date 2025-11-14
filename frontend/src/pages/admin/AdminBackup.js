@@ -29,7 +29,12 @@ const AdminBackup = () => {
       setBackupInfo(response.data);
     } catch (error) {
       console.error('Error fetching backup info:', error);
-      toast.error('Erreur lors du chargement des informations');
+      console.error('Request URL:', `${API}/backup/info`);
+      if (error.response?.status === 404) {
+        toast.error('Endpoint non trouvé. Le backend doit être redéployé sur Render.');
+      } else {
+        toast.error('Erreur lors du chargement des informations');
+      }
     } finally {
       setLoadingInfo(false);
     }
@@ -81,9 +86,25 @@ const AdminBackup = () => {
       toast.success('Sauvegarde téléchargée avec succès !');
     } catch (error) {
       console.error('Error downloading backup:', error);
-      const errorMessage = error.response?.data?.detail || 
-                          error.message || 
-                          'Erreur lors du téléchargement de la sauvegarde';
+      console.error('Error response:', error.response);
+      console.error('Request URL:', `${API}/backup`);
+      
+      let errorMessage = 'Erreur lors du téléchargement de la sauvegarde';
+      
+      if (error.response) {
+        if (error.response.status === 404) {
+          errorMessage = 'Endpoint non trouvé. Le backend doit être redéployé sur Render.';
+        } else if (error.response.status === 403) {
+          errorMessage = 'Accès refusé. Vous devez être administrateur.';
+        } else if (error.response.data?.detail) {
+          errorMessage = error.response.data.detail;
+        } else {
+          errorMessage = `Erreur ${error.response.status}: ${error.response.statusText}`;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast.error(errorMessage);
     } finally {
       setLoading(false);
