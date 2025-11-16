@@ -178,6 +178,7 @@ class Deal(BaseModel):
     lien: Optional[str] = None
     prix: float
     prix_ref: Optional[float] = None
+    disponible: bool = True
     posted_by: str
     date: str
 
@@ -188,6 +189,7 @@ class DealCreate(BaseModel):
     lien: Optional[str] = None
     prix: float
     prix_ref: Optional[float] = None
+    disponible: Optional[bool] = True
 
 class TodoItem(BaseModel):
     text: str
@@ -773,6 +775,7 @@ async def create_deal(deal: DealCreate, user_data: dict = Depends(verify_token))
         'lien': deal.lien,
         'prix': deal.prix,
         'prix_ref': deal.prix_ref,
+        'disponible': True if deal.disponible is None else deal.disponible,
         'posted_by': user_data['username'],
         'date': datetime.now(timezone.utc).isoformat()
     }
@@ -796,6 +799,37 @@ async def list_deals(user_data: dict = Depends(verify_token)):
         raise HTTPException(status_code=403, detail='Admin or employee only')
     deals = await db.deals.find({}, {'_id': 0}).sort('date', -1).to_list(1000)
     return deals
+
+@api_router.get("/deals/mine", response_model=List[Deal])
+async def list_my_deals(user_data: dict = Depends(verify_token)):
+    # DealBurner can see his own deals
+    if user_data['role'] != 'dealburner':
+        raise HTTPException(status_code=403, detail='DealBurner only')
+    deals = await db.deals.find({'posted_by': user_data['username']}, {'_id': 0}).sort('date', -1).to_list(1000)
+    return deals
+
+@api_router.delete("/deals/{deal_id}")
+async def delete_deal(deal_id: str, user_data: dict = Depends(verify_token)):
+    deal = await db.deals.find_one({'id': deal_id})
+    if not deal:
+        raise HTTPException(status_code=404, detail='Deal not found')
+    # Owner or admin/employee can delete
+    if user_data['role'] not in ['admin', 'employee'] and deal.get('posted_by') != user_data['username']:
+        raise HTTPException(status_code=403, detail='Unauthorized')
+    await db.deals.delete_one({'id': deal_id})
+    return {'message': 'Deal deleted'}
+
+@api_router.put("/deals/{deal_id}/availability")
+async def update_deal_availability(deal_id: str, data: dict, user_data: dict = Depends(verify_token)):
+    deal = await db.deals.find_one({'id': deal_id})
+    if not deal:
+        raise HTTPException(status_code=404, detail='Deal not found')
+    # Owner or admin/employee can update availability
+    if user_data['role'] not in ['admin', 'employee'] and deal.get('posted_by') != user_data['username']:
+        raise HTTPException(status_code=403, detail='Unauthorized')
+    disponible = bool(data.get('disponible', True))
+    await db.deals.update_one({'id': deal_id}, {'$set': {'disponible': disponible}})
+    return {'message': 'Deal updated', 'disponible': disponible}
 
 # Memo (user-specific)
 @api_router.get("/memo")
