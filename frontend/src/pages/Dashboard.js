@@ -34,12 +34,26 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    if (socket) {
-      socket.on('message', (data) => {
+    if (!socket) return;
+    const onMessage = (event) => {
+      try {
+        const data = typeof event?.data === 'string' ? JSON.parse(event.data) : event;
         if (data.type === 'postit_created' || data.type === 'postit_checked' || data.type === 'postit_deleted') {
           fetchPostits();
         }
-      });
+      } catch {
+        // ignore
+      }
+    };
+    if (typeof socket.addEventListener === 'function') {
+      socket.addEventListener('message', onMessage);
+      return () => socket.removeEventListener('message', onMessage);
+    }
+    if (typeof socket.on === 'function') {
+      socket.on('message', onMessage);
+      return () => {
+        if (typeof socket.off === 'function') socket.off('message', onMessage);
+      };
     }
   }, [socket]);
 
