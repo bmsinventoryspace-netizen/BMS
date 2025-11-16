@@ -21,13 +21,16 @@ const DealFire = () => {
   const [deals, setDeals] = useState([]);
   const [selected, setSelected] = useState(null);
   const [hasNew, setHasNew] = useState(false);
+  const [error, setError] = useState(null);
 
   const loadDeals = async () => {
     try {
       const res = await axios.get(`${API}/deals`);
       setDeals(res.data);
+      setError(null);
     } catch (e) {
-      console.error(e);
+      console.error('DealFire load error:', e);
+      setError(e?.response?.data?.detail || 'Erreur de chargement');
     }
   };
 
@@ -37,20 +40,34 @@ const DealFire = () => {
 
   useEffect(() => {
     if (!socket) return;
-    const handler = (msg) => {
-      if (msg?.type === 'deal_created') {
-        setHasNew(true);
-        loadDeals();
-      }
+    const onMessage = (event) => {
+      try {
+        const msg = typeof event?.data === 'string' ? JSON.parse(event.data) : event;
+        if (msg?.type === 'deal_created') {
+          setHasNew(true);
+          loadDeals();
+        }
+      } catch {}
     };
-    socket.on('message', handler);
-    return () => {
-      socket.off('message', handler);
-    };
+    if (typeof socket.addEventListener === 'function') {
+      socket.addEventListener('message', onMessage);
+      return () => socket.removeEventListener('message', onMessage);
+    }
+    if (typeof socket.on === 'function') {
+      socket.on('message', onMessage);
+      return () => {
+        if (typeof socket.off === 'function') socket.off('message', onMessage);
+      };
+    }
   }, [socket]);
 
   return (
     <Layout>
+      {error && (
+        <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 border border-red-200">
+          {error}
+        </div>
+      )}
       <div className="flex items-center justify-between mb-6">
         <h1 className={`text-2xl font-bold ${theme.text}`}>DealFire</h1>
         {hasNew && (
