@@ -14,6 +14,7 @@ const AdminNumeros = () => {
   const [settings, setSettings] = useState({
     tel_commande: '',
     tel_pub: '',
+    deal_email: '',
   });
 
   useEffect(() => {
@@ -85,6 +86,24 @@ const AdminNumeros = () => {
                 onChange={(e) => setSettings({ ...settings, tel_pub: e.target.value })}
                 className="text-lg border-blue-200 focus:border-blue-400"
                 data-testid="tel-pub-input"
+              />
+            </div>
+
+            <div className="border-t pt-6">
+              <Label htmlFor="deal_email" className="text-lg font-semibold">
+                Email notification DealFire
+              </Label>
+              <p className="text-sm text-gray-600 mb-2">
+                Si renseigné, un email est envoyé à cette adresse à chaque nouveau deal (SMTP requis).
+              </p>
+              <Input
+                id="deal_email"
+                type="email"
+                placeholder="ex: deals@votredomaine.com"
+                value={settings.deal_email || ''}
+                onChange={(e) => setSettings({ ...settings, deal_email: e.target.value })}
+                className="text-lg border-blue-200 focus:border-blue-400"
+                data-testid="deal-email-input"
               />
             </div>
 

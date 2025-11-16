@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../App';
 import { Logo } from '../hooks/useLogo';
@@ -29,10 +29,21 @@ import {
   ShoppingCart,
   Receipt,
   Database,
+  Flame,
 } from 'lucide-react';
 
+const FlameWithBadge = ({ className, hasNew }) => {
+  return (
+    <div className="relative">
+      <Flame className={className} />
+      {hasNew && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-600 rounded-full animate-ping" />}
+      {hasNew && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-600 rounded-full" />}
+    </div>
+  );
+};
+
 const Layout = ({ children }) => {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, socket } = useContext(AuthContext);
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -106,15 +117,45 @@ const Layout = ({ children }) => {
 
   const isActive = (path) => location.pathname === path;
 
-  const navItems = [
+  const [hasNewDeal, setHasNewDeal] = useState(false);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handler = (msg) => {
+      if (msg?.type === 'deal_created') {
+        setHasNewDeal(true);
+      }
+    };
+    socket.on('message', handler);
+    return () => {
+      socket.off('message', handler);
+    };
+  }, [socket]);
+
+  const baseNav = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/inventaire', label: 'Inventaire', icon: Package },
     { path: '/catalogue-gestion', label: 'Catalogue', icon: ShoppingCart },
-    { path: '/huiles', label: 'Huiles & Liquides', icon: Droplet },
     { path: '/post-it', label: 'Post-it', icon: StickyNote },
     { path: '/agenda', label: 'Agenda', icon: Calendar },
-    { path: '/stats', label: 'Statistiques', icon: TrendingUp },
   ];
+
+  let navItems = baseNav;
+  if (user?.role === 'admin' || user?.role === 'employee') {
+    navItems = [
+      { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { path: '/inventaire', label: 'Inventaire', icon: Package },
+      { path: '/catalogue-gestion', label: 'Catalogue', icon: ShoppingCart },
+      { path: '/dealfire', label: 'DealFire', icon: FlameWithBadge },
+      { path: '/huiles', label: 'Huiles & Liquides', icon: Droplet },
+      { path: '/post-it', label: 'Post-it', icon: StickyNote },
+      { path: '/agenda', label: 'Agenda', icon: Calendar },
+      { path: '/stats', label: 'Statistiques', icon: TrendingUp },
+    ];
+  } else if (user?.role === 'dealburner') {
+    navItems = [
+      { path: '/deals', label: 'Deals', icon: ShoppingCart },
+    ];
+  }
 
   const adminItems = [
     { path: '/admin/commandes', label: 'Commandes', icon: Receipt },
@@ -154,8 +195,11 @@ const Layout = ({ children }) => {
                           ? theme.button
                           : `text-gray-700 ${theme.hover}`
                       }`}
+                      onClick={() => {
+                        if (item.path === '/dealfire') setHasNewDeal(false);
+                      }}
                     >
-                      <Icon className="w-4 h-4 mr-2" />
+                      <Icon className="w-4 h-4 mr-2" hasNew={hasNewDeal && item.path === '/dealfire'} />
                       {item.label}
                     </Button>
                   </Link>
@@ -213,7 +257,9 @@ const Layout = ({ children }) => {
               <DropdownMenuContent align="end" className="w-56">
                 <div className="px-2 py-2">
                   <p className="text-sm font-medium text-gray-900">{user?.username}</p>
-                  <p className="text-xs text-gray-500">{user?.role === 'admin' ? 'Administrateur' : 'Employé'}</p>
+                  <p className="text-xs text-gray-500">
+                    {user?.role === 'admin' ? 'Administrateur' : user?.role === 'employee' ? 'Employé' : user?.role === 'dealburner' ? 'DealBurner' : ''}
+                  </p>
                 </div>
                 <DropdownMenuSeparator />
                 {user?.role === 'admin' && (

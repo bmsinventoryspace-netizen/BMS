@@ -61,3 +61,4 @@ python seed_inventory.py
 COPIEZ CES COMMANDES UNE PAR UNE DANS POWERSHELL !
 ═══════════════════════════════════════════════════════════════
 
+

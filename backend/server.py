@@ -167,6 +167,27 @@ class Settings(BaseModel):
     tel_pub: Optional[str] = None
     logo: Optional[str] = None
     theme_color: Optional[str] = 'blue'  # blue, green, red, purple, orange, teal, pink, indigo
+    deal_email: Optional[str] = None  # email destinataire pour nouveaux deals
+
+class Deal(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    nom: str
+    description: Optional[str] = None
+    image: Optional[str] = None
+    lien: Optional[str] = None
+    prix: float
+    prix_ref: Optional[float] = None
+    posted_by: str
+    date: str
+
+class DealCreate(BaseModel):
+    nom: str
+    description: Optional[str] = None
+    image: Optional[str] = None
+    lien: Optional[str] = None
+    prix: float
+    prix_ref: Optional[float] = None
 
 class TodoItem(BaseModel):
     text: str
@@ -278,8 +299,16 @@ async def startup_event():
         await db.settings.insert_one({
             'tel_commande': None,
             'tel_pub': None,
-            'theme_color': 'blue'
+            'theme_color': 'blue',
+            'deal_email': None
         })
+    else:
+        # ensure new fields exist
+        updates = {}
+        if 'deal_email' not in settings:
+            updates['deal_email'] = None
+        if updates:
+            await db.settings.update_one({}, {'$set': updates})
 
 # WebSocket endpoint
 @api_router.websocket("/ws")
@@ -668,9 +697,11 @@ async def delete_pub(pub_id: str, user_data: dict = Depends(verify_token)):
 async def get_settings():
     settings = await db.settings.find_one({}, {'_id': 0})
     if not settings:
-        return {'tel_commande': None, 'tel_pub': None, 'theme_color': 'blue'}
+        return {'tel_commande': None, 'tel_pub': None, 'theme_color': 'blue', 'deal_email': None}
     if 'theme_color' not in settings:
         settings['theme_color'] = 'blue'
+    if 'deal_email' not in settings:
+        settings['deal_email'] = None
     return settings
 
 @api_router.put("/settings")
@@ -680,6 +711,91 @@ async def update_settings(settings: Settings, user_data: dict = Depends(verify_t
     
     await db.settings.update_one({}, {'$set': settings.model_dump()}, upsert=True)
     return {'message': 'Settings updated'}
+
+# Deals (DealBurner role creates; admin/employee read)
+def _send_deal_email_if_configured(deal: Dict[str, Any]):
+    """Optional: send email when a new deal is created, if SMTP env is configured and settings.deal_email present"""
+    try:
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.utils import formataddr
+    except Exception:
+        return
+    try:
+        smtp_host = os.environ.get('SMTP_HOST')
+        smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+        smtp_user = os.environ.get('SMTP_USER')
+        smtp_pass = os.environ.get('SMTP_PASS')
+        smtp_from = os.environ.get('SMTP_FROM') or smtp_user
+        if not smtp_host or not smtp_user or not smtp_pass or not smtp_from:
+            return
+        # fetch deal_email sync via motor's underlying sync client not available; we skip and rely on deal['notify_to']
+        to_email = deal.get('notify_to')
+        if not to_email:
+            return
+        subject = f"Nouveau Deal: {deal.get('nom')}"
+        lines = [
+            f"Nom: {deal.get('nom')}",
+            f"Prix: {deal.get('prix')}",
+            f"Prix de ref: {deal.get('prix_ref') or 'N/A'}",
+            f"Lien: {deal.get('lien') or 'N/A'}",
+            f"Posté par: {deal.get('posted_by')}",
+            f"Date: {deal.get('date')}",
+        ]
+        body = "\n".join(lines)
+        msg = MIMEText(body, _charset='utf-8')
+        msg['Subject'] = subject
+        msg['From'] = formataddr(('BMS Inventory', smtp_from))
+        msg['To'] = to_email
+        server = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
+        try:
+            server.starttls()
+        except Exception:
+            pass
+        server.login(smtp_user, smtp_pass)
+        server.sendmail(smtp_from, [to_email], msg.as_string())
+        server.quit()
+    except Exception as e:
+        logger.warning(f"SMTP deal email failed: {e}")
+
+@api_router.post("/deals")
+async def create_deal(deal: DealCreate, user_data: dict = Depends(verify_token)):
+    # Only role 'dealburner' can create
+    if user_data['role'] != 'dealburner':
+        raise HTTPException(status_code=403, detail='DealBurner only')
+    compressed_image = compress_image(deal.image) if deal.image else None
+    deal_id = str(uuid.uuid4())
+    deal_data = {
+        'id': deal_id,
+        'nom': deal.nom,
+        'description': deal.description,
+        'image': compressed_image,
+        'lien': deal.lien,
+        'prix': deal.prix,
+        'prix_ref': deal.prix_ref,
+        'posted_by': user_data['username'],
+        'date': datetime.now(timezone.utc).isoformat()
+    }
+    await db.deals.insert_one(deal_data)
+    # find notification email from settings
+    settings = await db.settings.find_one({}, {'_id': 0})
+    notify_to = settings.get('deal_email') if settings else None
+    # Broadcast for flame badge
+    await broadcast_notification({
+        'type': 'deal_created',
+        'data': {'id': deal_id, 'nom': deal.nom, 'by': user_data['username']}
+    })
+    # Optional email
+    _send_deal_email_if_configured({**deal_data, 'notify_to': notify_to})
+    return {'id': deal_id, 'message': 'Deal créé avec succès'}
+
+@api_router.get("/deals", response_model=List[Deal])
+async def list_deals(user_data: dict = Depends(verify_token)):
+    # Admin and employee can view
+    if user_data['role'] not in ['admin', 'employee']:
+        raise HTTPException(status_code=403, detail='Admin or employee only')
+    deals = await db.deals.find({}, {'_id': 0}).sort('date', -1).to_list(1000)
+    return deals
 
 # Memo (user-specific)
 @api_router.get("/memo")

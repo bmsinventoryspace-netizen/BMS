@@ -20,6 +20,8 @@ import AdminLogo from './pages/admin/AdminLogo';
 import AdminCommandes from './pages/admin/AdminCommandes';
 import AdminBackup from './pages/admin/AdminBackup';
 import CatalogueGestion from './pages/CatalogueGestion';
+import DealFire from './pages/DealFire';
+import Deals from './pages/Deals';
 import { Toaster } from './components/ui/sonner';
 import io from 'socket.io-client';
 
@@ -107,6 +109,8 @@ function App() {
           <Route path="/" element={<CataloguePublic />} />
           <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
           <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
+          <Route path="/dealfire" element={user && (user.role === 'admin' || user.role === 'employee') ? <DealFire /> : <Navigate to="/login" />} />
+          <Route path="/deals" element={user && user.role === 'dealburner' ? <Deals /> : <Navigate to="/login" />} />
           <Route path="/inventaire" element={user ? <Inventaire /> : <Navigate to="/login" />} />
           <Route path="/catalogue-gestion" element={user ? <CatalogueGestion /> : <Navigate to="/login" />} />
           <Route path="/huiles" element={user ? <Huiles /> : <Navigate to="/login" />} />

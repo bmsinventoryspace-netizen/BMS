@@ -17,6 +17,16 @@ CORS_ORIGINS=https://your-app.netlify.app,http://localhost:3000
 
 # Server Configuration
 PORT=8000
+
+# Optional: SMTP (for DealFire email notifications)
+# If set and an email is configured in Admin > Numéros > Email notification DealFire,
+# an email is sent on each new Deal.
+# Typical example for Gmail SMTP (be careful with app passwords):
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_USER=your.email@domain.com
+# SMTP_PASS=your_app_password
+# SMTP_FROM=your.email@domain.com
 ```
 
 ## Frontend (.env)
