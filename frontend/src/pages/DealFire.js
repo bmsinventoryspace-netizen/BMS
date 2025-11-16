@@ -76,9 +76,9 @@ const DealFire = () => {
                       <span className="text-4xl font-bold text-gray-400">🔥</span>
                     </div>
                   )}
-                  {!d.disponible && (
-                    <div className="absolute top-3 left-3 bg-gray-800 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-                      Hors stock
+                  {d.disponible === false && (
+                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                      <span className="text-4xl font-extrabold text-red-600 drop-shadow-md">OOS</span>
                     </div>
                   )}
                   {pct && (

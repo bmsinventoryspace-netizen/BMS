@@ -135,10 +135,12 @@ const Deals = () => {
                       <span className="text-4xl font-bold text-gray-400">🔥</span>
                     </div>
                   )}
-                  {!d.disponible && (
-                    <div className="absolute top-3 right-3 bg-gray-800 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-                      Hors stock
-                    </div>
+                  {d.disponible === false && (
+                    <>
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                        <span className="text-4xl font-extrabold text-red-600 drop-shadow-md">OOS</span>
+                      </div>
+                    </>
                   )}
                 </div>
                 <div className="p-4 space-y-3">

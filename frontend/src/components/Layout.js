@@ -138,15 +138,28 @@ const Layout = ({ children }) => {
 
   useEffect(() => {
     if (!socket) return;
-    const handler = (msg) => {
-      if (msg?.type === 'deal_created') {
-        setHasNewDeal(true);
+    const onMessage = (event) => {
+      try {
+        const msg = typeof event?.data === 'string' ? JSON.parse(event.data) : event;
+        if (msg?.type === 'deal_created') {
+          setHasNewDeal(true);
+        }
+      } catch {
+        // ignore malformed
       }
     };
-    socket.on('message', handler);
-    return () => {
-      socket.off('message', handler);
-    };
+    // support native WebSocket
+    if (typeof socket.addEventListener === 'function') {
+      socket.addEventListener('message', onMessage);
+      return () => socket.removeEventListener('message', onMessage);
+    }
+    // fallback (if a socket-like object is provided)
+    if (typeof socket.on === 'function') {
+      socket.on('message', onMessage);
+      return () => {
+        if (typeof socket.off === 'function') socket.off('message', onMessage);
+      };
+    }
   }, [socket]);
 
   const baseNav = [

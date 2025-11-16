@@ -23,7 +23,7 @@ import CatalogueGestion from './pages/CatalogueGestion';
 import DealFire from './pages/DealFire';
 import Deals from './pages/Deals';
 import { Toaster } from './components/ui/sonner';
-import io from 'socket.io-client';
+// use native WebSocket instead of socket.io
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -48,15 +48,16 @@ function App() {
 
   useEffect(() => {
     if (user) {
-      const ws = io(BACKEND_URL, {
-        path: '/api/ws',
-        transports: ['websocket', 'polling']
-      });
-      setSocket(ws);
-
-      return () => {
-        ws.disconnect();
-      };
+      try {
+        const wsProtocol = BACKEND_URL.startsWith('https') ? 'wss' : 'ws';
+        const ws = new WebSocket(`${wsProtocol}://${BACKEND_URL.replace(/^https?:\/\//, '')}/api/ws`);
+        setSocket(ws);
+        return () => {
+          try { ws.close(); } catch {}
+        };
+      } catch {
+        // ignore
+      }
     }
   }, [user]);
 
