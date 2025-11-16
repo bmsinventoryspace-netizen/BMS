@@ -146,6 +146,7 @@ const AdminEmployes = () => {
                     <SelectContent>
                       <SelectItem value="employee">Employé</SelectItem>
                       <SelectItem value="admin">Administrateur</SelectItem>
+                      <SelectItem value="dealburner">DealBurner</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -181,7 +182,7 @@ const AdminEmployes = () => {
               >
                 <div className="flex items-center space-x-4">
                   <div className={`w-12 h-12 ${
-                    user.role === 'admin' ? 'bg-indigo-600' : 'bg-blue-600'
+                    user.role === 'admin' ? 'bg-indigo-600' : user.role === 'dealburner' ? 'bg-red-600' : 'bg-blue-600'
                   } rounded-full flex items-center justify-center`}>
                     <span className="text-white font-bold text-lg">
                       {user.username.charAt(0).toUpperCase()}
@@ -191,9 +192,13 @@ const AdminEmployes = () => {
                     <h3 className="font-bold text-gray-900">{user.username}</h3>
                     <div className="flex items-center space-x-2">
                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                        user.role === 'admin' ? 'bg-indigo-100 text-indigo-700' : 'bg-blue-100 text-blue-700'
+                        user.role === 'admin'
+                          ? 'bg-indigo-100 text-indigo-700'
+                          : user.role === 'dealburner'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-blue-100 text-blue-700'
                       }`}>
-                        {user.role === 'admin' ? 'Administrateur' : 'Employé'}
+                        {user.role === 'admin' ? 'Administrateur' : user.role === 'dealburner' ? 'DealBurner' : 'Employé'}
                       </span>
                       {user.phone && (
                         <span className="text-sm text-gray-600">{user.phone}</span>
