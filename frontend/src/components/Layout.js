@@ -135,6 +135,13 @@ const Layout = ({ children }) => {
   const isActive = (path) => location.pathname === path;
 
   const [hasNewDeal, setHasNewDeal] = useState(false);
+  const [lastDealSeenAt, setLastDealSeenAt] = useState(() => {
+    try {
+      return localStorage.getItem('lastDealSeenAt') || '';
+    } catch {
+      return '';
+    }
+  });
 
   useEffect(() => {
     if (!socket) return;
@@ -161,6 +168,35 @@ const Layout = ({ children }) => {
       };
     }
   }, [socket]);
+
+  // Fallback polling for new deals (admin/employee only)
+  useEffect(() => {
+    if (!(user?.role === 'admin' || user?.role === 'employee')) return;
+    let stopped = false;
+    const check = async () => {
+      try {
+        const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/deals`, {
+          headers: {
+            'Authorization': localStorage.getItem('token') ? `Bearer ${localStorage.getItem('token')}` : undefined,
+          },
+        });
+        if (!res.ok) return;
+        const deals = await res.json();
+        const newest = deals?.[0];
+        if (newest?.date) {
+          const lastSeen = lastDealSeenAt ? new Date(lastDealSeenAt).getTime() : 0;
+          const newestTime = new Date(newest.date).getTime();
+          if (newestTime > lastSeen && location.pathname !== '/dealfire') {
+            setHasNewDeal(true);
+          }
+        }
+      } catch {}
+    };
+    const id = setInterval(() => { if (!stopped) check(); }, 20000);
+    // initial
+    check();
+    return () => { stopped = true; clearInterval(id); };
+  }, [user, lastDealSeenAt, location.pathname]);
 
   const baseNav = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -248,7 +284,12 @@ const Layout = ({ children }) => {
                           : `text-gray-700 ${theme.hover}`
                       }`}
                       onClick={() => {
-                        if (item.path === '/dealfire') setHasNewDeal(false);
+                        if (item.path === '/dealfire') {
+                          setHasNewDeal(false);
+                          const now = new Date().toISOString();
+                          setLastDealSeenAt(now);
+                          try { localStorage.setItem('lastDealSeenAt', now); } catch {}
+                        }
                       }}
                     >
                       <Icon className="w-4 h-4 mr-2" hasNew={hasNewDeal && item.path === '/dealfire'} />
