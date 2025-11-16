@@ -33,11 +33,28 @@ import {
 } from 'lucide-react';
 
 const FlameWithBadge = ({ className, hasNew }) => {
+  if (!hasNew) {
+    return <Flame className={className} />;
+  }
+  // Animated flame with glow when there's a new deal
   return (
     <div className="relative">
-      <Flame className={className} />
-      {hasNew && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-600 rounded-full animate-ping" />}
-      {hasNew && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-600 rounded-full" />}
+      {/* Glow halo */}
+      <span className="absolute -inset-1 rounded-full bg-orange-500/40 blur-sm animate-[glow-pulse_1.4s_ease-in-out_infinite]" />
+      {/* Flame SVG */}
+      <svg
+        viewBox="0 0 24 24"
+        className={`${className} text-orange-500 drop-shadow-sm animate-[flame-flicker_1s_ease-in-out_infinite]`}
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M13.5 2.5c.2 2.4-1 3.6-2.2 4.8-1.2 1.3-2.3 2.4-1.8 4.5.3-1.1 1.5-1.9 2.6-1.8 1.5.1 2.8 1.5 2.8 3.3 0 2.2-1.8 4-4 4-2.7 0-4.9-2.2-4.9-4.9 0-4.1 3.1-6.2 5.2-8.2C12 3.5 12.8 2.8 13.5 2.5z" />
+        <path d="M12 22c-3.9 0-7-3.1-7-7 0-3.2 1.9-5.5 3.8-7.2-.4 1.2-.2 2.1.3 2.7C8.7 8.2 9.6 6.7 11 5.4c1.3-1.2 3-2.6 2.8-4.9C18 3.2 19 6.5 19 9c0 3.9-3.1 7-7 7z" opacity=".45" />
+      </svg>
+      {/* Hot core */}
+      <span className="absolute inset-0 flex items-center justify-center">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-300/90 blur-[1px] animate-[glow-pulse_1.4s_ease-in-out_infinite]" />
+      </span>
     </div>
   );
 };
@@ -168,13 +185,35 @@ const Layout = ({ children }) => {
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${theme.bg}`}>
+      {/* Flame animations (scoped) */}
+      <style>{`
+        @keyframes flame-flicker {
+          0% { transform: translateY(0) rotate(0deg) scale(1); filter: drop-shadow(0 0 0 rgba(255,140,0,0.3)); }
+          20% { transform: translateY(-0.5px) rotate(-2deg) scale(1.02); filter: drop-shadow(0 0 2px rgba(255,140,0,0.4)); }
+          40% { transform: translateY(0.4px) rotate(1.5deg) scale(0.98); filter: drop-shadow(0 0 3px rgba(255,160,40,0.45)); }
+          60% { transform: translateY(-0.6px) rotate(-1deg) scale(1.03); filter: drop-shadow(0 0 2px rgba(255,120,0,0.4)); }
+          80% { transform: translateY(0.3px) rotate(1deg) scale(0.99); filter: drop-shadow(0 0 1px rgba(255,120,0,0.35)); }
+          100% { transform: translateY(0) rotate(0deg) scale(1); filter: drop-shadow(0 0 0 rgba(255,140,0,0.3)); }
+        }
+        @keyframes glow-pulse {
+          0%, 100% { opacity: .6; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.06); }
+        }
+      `}</style>
       {/* Header */}
       <header className={`glass sticky top-0 z-50 border-b ${theme.border}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/dashboard" className="flex items-center space-x-3" data-testid="logo-link">
-              <Logo size="sm" />
+              <div className="relative flex items-center">
+                <Logo size="sm" />
+                {(hasNewDeal && (user?.role === 'admin' || user?.role === 'employee')) && (
+                  <div className="absolute -top-2 -right-2">
+                    <FlameWithBadge className="w-4 h-4" hasNew />
+                  </div>
+                )}
+              </div>
               <span className={`text-xl font-bold ${theme.text}`}>BMS Inventory</span>
             </Link>
 
