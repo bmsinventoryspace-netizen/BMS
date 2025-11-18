@@ -254,7 +254,7 @@ async def broadcast_notification(message: dict):
     for conn in disconnected:
         active_connections.remove(conn)
 
-def compress_image(base64_str: str, max_size: tuple = (1200, 1200), quality: int = 85) -> str:
+def compress_image(base64_str: str, max_size: tuple = (750, 750), quality: int = 75) -> str:
     """Compress base64 image and fix EXIF orientation"""
     try:
         if not base64_str or not isinstance(base64_str, str):

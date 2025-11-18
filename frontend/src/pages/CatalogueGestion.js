@@ -188,6 +188,8 @@ const CatalogueGestion = () => {
                     alt={article.nom}
                     effect="blur"
                     className="w-full h-full object-cover"
+                    threshold={200}
+                    placeholder={<div className="w-full h-full bg-gray-200 animate-pulse" />}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
