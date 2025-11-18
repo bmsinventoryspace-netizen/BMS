@@ -335,6 +335,30 @@ def compress_image(base64_str: str, max_size: tuple = (750, 750), quality: int =
 # Initialize admin user
 @app.on_event("startup")
 async def startup_event():
+    # Create indexes for better query performance
+    try:
+        # Index on articles.id for sorting
+        await db.articles.create_index([('id', -1)], background=True)
+        # Index on articles.public for filtering
+        await db.articles.create_index([('public', 1)], background=True)
+        # Compound index for public articles sorted by id
+        await db.articles.create_index([('public', 1), ('id', -1)], background=True)
+        
+        # Index on postits.date for sorting
+        await db.postits.create_index([('date', -1)], background=True)
+        
+        # Index on deals.date for sorting
+        await db.deals.create_index([('date', -1)], background=True)
+        # Index on deals.posted_by for filtering
+        await db.deals.create_index([('posted_by', 1)], background=True)
+        
+        # Index on commandes.date for sorting
+        await db.commandes.create_index([('date', -1)], background=True)
+        # Index on commandes.numero for sorting
+        await db.commandes.create_index([('numero', -1)], background=True)
+    except Exception as e:
+        print(f"Warning: Could not create indexes (they may already exist): {e}")
+    
     # Create admin user if not exists
     admin = await db.users.find_one({'username': 'AdminLudo'})
     if not admin:
@@ -464,9 +488,8 @@ async def get_articles(user_data: dict = Depends(verify_token)):
 
 @api_router.get("/articles/public")
 async def get_public_articles():
-    # Récupérer tous les articles publics
-    cursor = db.articles.find({'public': True}, {'_id': 0}).sort('id', -1).allow_disk_use(True)
-    all_articles = await cursor.to_list(1000)
+    # Récupérer tous les articles publics (compound index on public+id should handle this)
+    all_articles = await db.articles.find({'public': True}, {'_id': 0}).sort('id', -1).to_list(1000)
     # Filtrer ceux qui ont du stock (quantite > 0 pour pièces, litres > 0 pour liquides)
     articles = [
         a for a in all_articles 
@@ -477,10 +500,8 @@ async def get_public_articles():
 
 @api_router.post("/articles")
 async def create_article(article: ArticleCreate, user_data: dict = Depends(verify_token)):
-    # Get next ID
-    cursor = db.articles.find({}, {'_id': 0, 'id': 1}).sort('id', -1).allow_disk_use(True).limit(1)
-    last_article = await cursor.to_list(1)
-    last_article = last_article[0] if last_article else None
+    # Get next ID (index on id should handle this efficiently)
+    last_article = await db.articles.find_one({}, {'_id': 0, 'id': 1}, sort=[('id', -1)])
     next_id = (last_article['id'] + 1) if last_article else 1
     
     # Check if SKU already exists, generate new one if needed
@@ -618,8 +639,8 @@ async def update_quantity(article_id: int, data: dict, user_data: dict = Depends
 # Post-its
 @api_router.get("/postits", response_model=List[PostIt])
 async def get_postits(user_data: dict = Depends(verify_token)):
-    cursor = db.postits.find({}, {'_id': 0}).sort('date', -1).allow_disk_use(True)
-    postits = await cursor.to_list(1000)
+    # Index on date should handle sorting efficiently
+    postits = await db.postits.find({}, {'_id': 0}).sort('date', -1).to_list(1000)
     return postits
 
 @api_router.post("/postits")
@@ -855,8 +876,8 @@ async def list_deals(user_data: dict = Depends(verify_token)):
     # Admin and employee can view
     if user_data['role'] not in ['admin', 'employee']:
         raise HTTPException(status_code=403, detail='Admin or employee only')
-    cursor = db.deals.find({}, {'_id': 0}).sort('date', -1).allow_disk_use(True)
-    deals = await cursor.to_list(1000)
+    # Index on date should handle sorting efficiently
+    deals = await db.deals.find({}, {'_id': 0}).sort('date', -1).to_list(1000)
     return deals
 
 @api_router.get("/deals/mine", response_model=List[Deal])
@@ -864,8 +885,8 @@ async def list_my_deals(user_data: dict = Depends(verify_token)):
     # DealBurner can see his own deals
     if user_data['role'] != 'dealburner':
         raise HTTPException(status_code=403, detail='DealBurner only')
-    cursor = db.deals.find({'posted_by': user_data['username']}, {'_id': 0}).sort('date', -1).allow_disk_use(True)
-    deals = await cursor.to_list(1000)
+    # Index on date should handle sorting efficiently
+    deals = await db.deals.find({'posted_by': user_data['username']}, {'_id': 0}).sort('date', -1).to_list(1000)
     return deals
 
 @api_router.delete("/deals/{deal_id}")
@@ -987,11 +1008,11 @@ async def create_commande(commande: CommandeCreate):
     """Créer une nouvelle commande depuis le catalogue public"""
     # Générer un numéro unique
     year = datetime.now(timezone.utc).year
-    cursor = db.commandes.find(
-        {'numero': {'$regex': f'^CMD-{year}-'}}
-    ).sort('numero', -1).allow_disk_use(True).limit(1)
-    last_commandes = await cursor.to_list(1)
-    last_commande = last_commandes[0] if last_commandes else None
+    # Index on numero should handle sorting efficiently
+    last_commande = await db.commandes.find_one(
+        {'numero': {'$regex': f'^CMD-{year}-'}},
+        sort=[('numero', -1)]
+    )
     if last_commande:
         last_num = int(last_commande['numero'].split('-')[-1])
         next_num = last_num + 1
@@ -1025,8 +1046,8 @@ async def get_commandes(user_data: dict = Depends(verify_token)):
     if user_data['role'] != 'admin':
         raise HTTPException(status_code=403, detail='Admin only')
     
-    cursor = db.commandes.find({}, {'_id': 0}).sort('date', -1).allow_disk_use(True)
-    commandes = await cursor.to_list(1000)
+    # Index on date should handle sorting efficiently
+    commandes = await db.commandes.find({}, {'_id': 0}).sort('date', -1).to_list(1000)
     return commandes
 
 @api_router.get("/commandes/{commande_id}", response_model=Commande)
