@@ -325,31 +325,6 @@ const Inventaire = () => {
     }
   };
 
-  const handleFixImages = async () => {
-    if (!window.confirm('Voulez-vous corriger l\'orientation de toutes les images existantes ? Cela peut prendre quelques instants.')) {
-      return;
-    }
-    
-    try {
-      const token = localStorage.getItem('token');
-      toast.info('Correction des images en cours...', { duration: 5000 });
-      
-      const response = await axios.post(`${API}/articles/fix-images`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      const message = response.data.errors > 0
-        ? `Images corrigées : ${response.data.articles_updated} articles mis à jour (${response.data.errors} erreurs)`
-        : `Images corrigées : ${response.data.articles_updated} articles mis à jour, ${response.data.images_processed} images traitées`;
-      
-      toast.success(message);
-      fetchArticles(); // Recharger pour voir les changements
-    } catch (error) {
-      const errorMessage = error.response?.data?.detail || error.message || 'Erreur inconnue';
-      toast.error(`Erreur lors de la correction des images: ${errorMessage}`);
-      console.error('Error fixing images:', error);
-    }
-  };
 
   const openReferenceSearch = () => {
     if (formData.nom) {
@@ -418,17 +393,6 @@ const Inventaire = () => {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">Inventaire</h1>
           <div className="flex space-x-3">
-            {user?.role === 'admin' && (
-              <Button
-                onClick={handleFixImages}
-                variant="outline"
-                className={`${theme.border500} ${theme.textLight} ${theme.bgLight} hover:opacity-80`}
-                title="Corriger l'orientation de toutes les images existantes"
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Corriger images
-              </Button>
-            )}
             <Button
               onClick={handleExport}
               variant="outline"
