@@ -481,9 +481,8 @@ async def delete_user(username: str, user_data: dict = Depends(verify_token)):
 # Articles/Inventory
 @api_router.get("/articles", response_model=List[Article])
 async def get_articles(user_data: dict = Depends(verify_token)):
-    # Use allowDiskUse to handle large sorts
-    cursor = db.articles.find({}, {'_id': 0}).sort('id', -1).allow_disk_use(True)
-    articles = await cursor.to_list(10000)
+    # Index on 'id' should handle sorting efficiently
+    articles = await db.articles.find({}, {'_id': 0}).sort('id', -1).to_list(10000)
     return articles
 
 @api_router.get("/articles/public")
