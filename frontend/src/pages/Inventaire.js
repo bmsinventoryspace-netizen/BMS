@@ -332,15 +332,22 @@ const Inventaire = () => {
     
     try {
       const token = localStorage.getItem('token');
+      toast.info('Correction des images en cours...', { duration: 5000 });
+      
       const response = await axios.post(`${API}/articles/fix-images`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      toast.success(`Images corrigées : ${response.data.articles_updated} articles mis à jour`);
+      const message = response.data.errors > 0
+        ? `Images corrigées : ${response.data.articles_updated} articles mis à jour (${response.data.errors} erreurs)`
+        : `Images corrigées : ${response.data.articles_updated} articles mis à jour, ${response.data.images_processed} images traitées`;
+      
+      toast.success(message);
       fetchArticles(); // Recharger pour voir les changements
     } catch (error) {
-      toast.error('Erreur lors de la correction des images');
-      console.error(error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Erreur inconnue';
+      toast.error(`Erreur lors de la correction des images: ${errorMessage}`);
+      console.error('Error fixing images:', error);
     }
   };
 

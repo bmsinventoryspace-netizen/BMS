@@ -257,18 +257,44 @@ async def broadcast_notification(message: dict):
 def compress_image(base64_str: str, max_size: tuple = (1200, 1200), quality: int = 85) -> str:
     """Compress base64 image and fix EXIF orientation"""
     try:
-        if not base64_str or not base64_str.startswith('data:image'):
+        if not base64_str or not isinstance(base64_str, str):
+            return base64_str
+        
+        # Check if it's a data URL
+        if not base64_str.startswith('data:image'):
+            # Might already be processed or invalid, return as-is
+            return base64_str
+        
+        # Split header and data
+        if ',' not in base64_str:
             return base64_str
         
         header, data = base64_str.split(',', 1)
-        img_data = base64.b64decode(data)
-        img = Image.open(BytesIO(img_data))
+        if not data:
+            return base64_str
+        
+        # Decode base64
+        try:
+            img_data = base64.b64decode(data)
+        except Exception as e:
+            print(f"Error decoding base64: {e}")
+            return base64_str
+        
+        if not img_data:
+            return base64_str
+        
+        # Open image
+        try:
+            img = Image.open(BytesIO(img_data))
+        except Exception as e:
+            print(f"Error opening image: {e}")
+            return base64_str
         
         # Fix EXIF orientation (rotates image based on EXIF data)
         # This will automatically rotate the image to the correct orientation
         try:
             img = ImageOps.exif_transpose(img)
-        except Exception:
+        except Exception as exif_err:
             # If exif_transpose fails, try to get orientation from EXIF manually
             try:
                 exif = img.getexif()
@@ -302,6 +328,8 @@ def compress_image(base64_str: str, max_size: tuple = (1200, 1200), quality: int
         return f"data:image/jpeg;base64,{compressed_data}"
     except Exception as e:
         print(f"Error compressing image: {e}")
+        import traceback
+        traceback.print_exc()
         return base64_str
 
 # Initialize admin user
@@ -1079,31 +1107,54 @@ async def fix_all_images(user_data: dict = Depends(verify_token)):
     try:
         articles = await db.articles.find({}, {'_id': 0}).to_list(10000)
         updated_count = 0
+        error_count = 0
+        processed_count = 0
         
         for article in articles:
             if not article.get('photos') or len(article.get('photos', [])) == 0:
                 continue
             
-            # Re-process all photos
-            fixed_photos = []
-            for photo in article['photos']:
-                fixed_photo = compress_image(photo)
-                fixed_photos.append(fixed_photo)
-            
-            # Only update if photos changed
-            if fixed_photos != article['photos']:
+            try:
+                # Re-process all photos
+                fixed_photos = []
+                for photo in article['photos']:
+                    if not photo or not isinstance(photo, str):
+                        fixed_photos.append(photo)
+                        continue
+                    
+                    try:
+                        fixed_photo = compress_image(photo)
+                        fixed_photos.append(fixed_photo)
+                    except Exception as e:
+                        print(f"Error processing photo for article {article.get('id')}: {e}")
+                        # Keep original photo if processing fails
+                        fixed_photos.append(photo)
+                        error_count += 1
+                
+                # Always update to ensure EXIF data is removed (even if image looks same)
+                # This ensures future displays won't have orientation issues
                 await db.articles.update_one(
                     {'id': article['id']},
                     {'$set': {'photos': fixed_photos}}
                 )
                 updated_count += 1
+                processed_count += len(article['photos'])
+            except Exception as e:
+                print(f"Error processing article {article.get('id')}: {e}")
+                error_count += 1
+                continue
         
         return {
             'message': f'Images re-processed successfully',
             'articles_updated': updated_count,
-            'total_articles': len(articles)
+            'total_articles': len(articles),
+            'images_processed': processed_count,
+            'errors': error_count
         }
     except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"Error in fix_all_images: {error_detail}")
         raise HTTPException(status_code=500, detail=f'Error fixing images: {str(e)}')
 
 @api_router.get("/backup/info")
