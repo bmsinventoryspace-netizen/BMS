@@ -457,13 +457,16 @@ async def delete_user(username: str, user_data: dict = Depends(verify_token)):
 # Articles/Inventory
 @api_router.get("/articles", response_model=List[Article])
 async def get_articles(user_data: dict = Depends(verify_token)):
-    articles = await db.articles.find({}, {'_id': 0}).sort('id', -1).to_list(10000)
+    # Use allowDiskUse to handle large sorts
+    cursor = db.articles.find({}, {'_id': 0}).sort('id', -1).allow_disk_use(True)
+    articles = await cursor.to_list(10000)
     return articles
 
 @api_router.get("/articles/public")
 async def get_public_articles():
     # Récupérer tous les articles publics
-    all_articles = await db.articles.find({'public': True}, {'_id': 0}).sort('id', -1).to_list(1000)
+    cursor = db.articles.find({'public': True}, {'_id': 0}).sort('id', -1).allow_disk_use(True)
+    all_articles = await cursor.to_list(1000)
     # Filtrer ceux qui ont du stock (quantite > 0 pour pièces, litres > 0 pour liquides)
     articles = [
         a for a in all_articles 
@@ -475,7 +478,9 @@ async def get_public_articles():
 @api_router.post("/articles")
 async def create_article(article: ArticleCreate, user_data: dict = Depends(verify_token)):
     # Get next ID
-    last_article = await db.articles.find_one({}, {'_id': 0, 'id': 1}, sort=[('id', -1)])
+    cursor = db.articles.find({}, {'_id': 0, 'id': 1}).sort('id', -1).allow_disk_use(True).limit(1)
+    last_article = await cursor.to_list(1)
+    last_article = last_article[0] if last_article else None
     next_id = (last_article['id'] + 1) if last_article else 1
     
     # Check if SKU already exists, generate new one if needed
@@ -613,7 +618,8 @@ async def update_quantity(article_id: int, data: dict, user_data: dict = Depends
 # Post-its
 @api_router.get("/postits", response_model=List[PostIt])
 async def get_postits(user_data: dict = Depends(verify_token)):
-    postits = await db.postits.find({}, {'_id': 0}).sort('date', -1).to_list(1000)
+    cursor = db.postits.find({}, {'_id': 0}).sort('date', -1).allow_disk_use(True)
+    postits = await cursor.to_list(1000)
     return postits
 
 @api_router.post("/postits")
@@ -849,7 +855,8 @@ async def list_deals(user_data: dict = Depends(verify_token)):
     # Admin and employee can view
     if user_data['role'] not in ['admin', 'employee']:
         raise HTTPException(status_code=403, detail='Admin or employee only')
-    deals = await db.deals.find({}, {'_id': 0}).sort('date', -1).to_list(1000)
+    cursor = db.deals.find({}, {'_id': 0}).sort('date', -1).allow_disk_use(True)
+    deals = await cursor.to_list(1000)
     return deals
 
 @api_router.get("/deals/mine", response_model=List[Deal])
@@ -857,7 +864,8 @@ async def list_my_deals(user_data: dict = Depends(verify_token)):
     # DealBurner can see his own deals
     if user_data['role'] != 'dealburner':
         raise HTTPException(status_code=403, detail='DealBurner only')
-    deals = await db.deals.find({'posted_by': user_data['username']}, {'_id': 0}).sort('date', -1).to_list(1000)
+    cursor = db.deals.find({'posted_by': user_data['username']}, {'_id': 0}).sort('date', -1).allow_disk_use(True)
+    deals = await cursor.to_list(1000)
     return deals
 
 @api_router.delete("/deals/{deal_id}")
@@ -979,10 +987,11 @@ async def create_commande(commande: CommandeCreate):
     """Créer une nouvelle commande depuis le catalogue public"""
     # Générer un numéro unique
     year = datetime.now(timezone.utc).year
-    last_commande = await db.commandes.find_one(
-        {'numero': {'$regex': f'^CMD-{year}-'}},
-        sort=[('numero', -1)]
-    )
+    cursor = db.commandes.find(
+        {'numero': {'$regex': f'^CMD-{year}-'}}
+    ).sort('numero', -1).allow_disk_use(True).limit(1)
+    last_commandes = await cursor.to_list(1)
+    last_commande = last_commandes[0] if last_commandes else None
     if last_commande:
         last_num = int(last_commande['numero'].split('-')[-1])
         next_num = last_num + 1
@@ -1016,7 +1025,8 @@ async def get_commandes(user_data: dict = Depends(verify_token)):
     if user_data['role'] != 'admin':
         raise HTTPException(status_code=403, detail='Admin only')
     
-    commandes = await db.commandes.find({}, {'_id': 0}).sort('date', -1).to_list(1000)
+    cursor = db.commandes.find({}, {'_id': 0}).sort('date', -1).allow_disk_use(True)
+    commandes = await cursor.to_list(1000)
     return commandes
 
 @api_router.get("/commandes/{commande_id}", response_model=Commande)
