@@ -18,7 +18,7 @@ import string
 from openpyxl import Workbook
 from io import BytesIO
 import base64
-from PIL import Image
+from PIL import Image, ImageOps
 import json
 
 ROOT_DIR = Path(__file__).parent
@@ -255,7 +255,7 @@ async def broadcast_notification(message: dict):
         active_connections.remove(conn)
 
 def compress_image(base64_str: str, max_size: tuple = (1200, 1200), quality: int = 85) -> str:
-    """Compress base64 image"""
+    """Compress base64 image and fix EXIF orientation"""
     try:
         if not base64_str or not base64_str.startswith('data:image'):
             return base64_str
@@ -263,6 +263,9 @@ def compress_image(base64_str: str, max_size: tuple = (1200, 1200), quality: int
         header, data = base64_str.split(',', 1)
         img_data = base64.b64decode(data)
         img = Image.open(BytesIO(img_data))
+        
+        # Fix EXIF orientation (rotates image based on EXIF data)
+        img = ImageOps.exif_transpose(img)
         
         # Convert RGBA to RGB if necessary
         if img.mode == 'RGBA':
