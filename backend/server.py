@@ -265,22 +265,43 @@ def compress_image(base64_str: str, max_size: tuple = (1200, 1200), quality: int
         img = Image.open(BytesIO(img_data))
         
         # Fix EXIF orientation (rotates image based on EXIF data)
-        img = ImageOps.exif_transpose(img)
+        # This will automatically rotate the image to the correct orientation
+        try:
+            img = ImageOps.exif_transpose(img)
+        except Exception:
+            # If exif_transpose fails, try to get orientation from EXIF manually
+            try:
+                exif = img.getexif()
+                if exif is not None:
+                    orientation = exif.get(274)  # Orientation tag
+                    if orientation == 3:
+                        img = img.rotate(180, expand=True)
+                    elif orientation == 6:
+                        img = img.rotate(270, expand=True)
+                    elif orientation == 8:
+                        img = img.rotate(90, expand=True)
+            except Exception:
+                pass  # If all fails, use image as-is
         
         # Convert RGBA to RGB if necessary
         if img.mode == 'RGBA':
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[3])  # Use alpha channel as mask
+            img = background
+        elif img.mode != 'RGB':
             img = img.convert('RGB')
         
         # Resize if needed
         img.thumbnail(max_size, Image.Resampling.LANCZOS)
         
-        # Compress
+        # Compress and save without EXIF to avoid orientation issues
         buffer = BytesIO()
         img.save(buffer, format='JPEG', quality=quality, optimize=True)
         compressed_data = base64.b64encode(buffer.getvalue()).decode()
         
         return f"data:image/jpeg;base64,{compressed_data}"
-    except:
+    except Exception as e:
+        print(f"Error compressing image: {e}")
         return base64_str
 
 # Initialize admin user
@@ -1048,6 +1069,42 @@ async def create_backup(user_data: dict = Depends(verify_token)):
     except Exception as e:
         logger.error(f"Error creating backup: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur lors de la création de la sauvegarde: {str(e)}")
+
+@api_router.post("/articles/fix-images")
+async def fix_all_images(user_data: dict = Depends(verify_token)):
+    """Re-process all article images to fix EXIF orientation (Admin only)"""
+    if user_data['role'] != 'admin':
+        raise HTTPException(status_code=403, detail='Admin only')
+    
+    try:
+        articles = await db.articles.find({}, {'_id': 0}).to_list(10000)
+        updated_count = 0
+        
+        for article in articles:
+            if not article.get('photos') or len(article.get('photos', [])) == 0:
+                continue
+            
+            # Re-process all photos
+            fixed_photos = []
+            for photo in article['photos']:
+                fixed_photo = compress_image(photo)
+                fixed_photos.append(fixed_photo)
+            
+            # Only update if photos changed
+            if fixed_photos != article['photos']:
+                await db.articles.update_one(
+                    {'id': article['id']},
+                    {'$set': {'photos': fixed_photos}}
+                )
+                updated_count += 1
+        
+        return {
+            'message': f'Images re-processed successfully',
+            'articles_updated': updated_count,
+            'total_articles': len(articles)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Error fixing images: {str(e)}')
 
 @api_router.get("/backup/info")
 async def get_backup_info(user_data: dict = Depends(verify_token)):
