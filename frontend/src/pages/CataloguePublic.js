@@ -54,6 +54,7 @@ const CataloguePublic = () => {
   const fetchArticles = async () => {
     try {
       const response = await axios.get(`${API}/articles/public`);
+      console.log('Public articles received:', response.data.length);
       setArticles(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching articles:', error);
@@ -392,16 +393,10 @@ const CataloguePublic = () => {
                 <div
                   key={article.id}
                   className="glass rounded-2xl overflow-hidden shadow-md hover-lift cursor-pointer"
-                  onClick={async () => {
-                    // Load full article details with photos
-                    try {
-                      const response = await axios.get(`${API}/articles/public/${article.id}`);
-                      setSelectedArticle(response.data);
-                      // Track view
-                      axios.post(`${API}/articles/${article.id}/view`).catch(console.error);
-                    } catch (error) {
-                      console.error('Error loading article details:', error);
-                    }
+                  onClick={() => {
+                    setSelectedArticle(article);
+                    // Track view
+                    axios.post(`${API}/articles/${article.id}/view`).catch(console.error);
                   }}
                   data-testid={`article-${article.id}`}
                 >
