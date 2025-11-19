@@ -52,14 +52,10 @@ const CatalogueGestion = () => {
       
       console.log('Total articles loaded:', allArticles.length);
       
-      // Filtrer uniquement les articles publics avec stock > 0
-      const publicArticles = allArticles.filter(a => 
-        a.public && 
-        ((a.type === 'piece' && (a.quantite || 0) > 0) || 
-         (a.type === 'liquide' && (a.litres || 0) > 0))
-      );
+      // Filtrer uniquement les articles publics (AVEC OU SANS STOCK - c'est la gestion)
+      const publicArticles = allArticles.filter(a => a.public === true);
       
-      console.log('Public articles with stock:', publicArticles.length);
+      console.log('Public articles (all):', publicArticles.length);
       setArticles(publicArticles);
     } catch (error) {
       console.error('Error loading articles:', error);
