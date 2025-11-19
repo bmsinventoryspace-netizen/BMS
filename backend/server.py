@@ -43,6 +43,20 @@ active_connections: List[WebSocket] = []
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# CORS configuration - Allow Vercel frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://bms-eight-iota.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "*"  # Allow all for development
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Models
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
