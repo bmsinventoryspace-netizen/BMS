@@ -111,9 +111,10 @@ const CataloguePublic = () => {
   const fetchArticles = async () => {
     try {
       const response = await axios.get(`${API}/articles/public`);
-      setArticles(response.data);
+      setArticles(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching articles:', error);
+      setArticles([]);
     }
   };
 
@@ -142,10 +143,18 @@ const CataloguePublic = () => {
       setSousCategories(response.data.sous_categories || []);
       
       // Récupérer les marques depuis l'endpoint dédié
-      const marquesResponse = await axios.get(`${API}/marques-public`);
-      setMarques(marquesResponse.data || []);
+      try {
+        const marquesResponse = await axios.get(`${API}/marques-public`);
+        setMarques(Array.isArray(marquesResponse.data) ? marquesResponse.data : []);
+      } catch (marquesError) {
+        console.error('Error fetching marques:', marquesError);
+        setMarques([]);
+      }
     } catch (error) {
       console.error('Error fetching categories:', error);
+      setCategories([]);
+      setSousCategories([]);
+      setMarques([]);
     }
   };
 
