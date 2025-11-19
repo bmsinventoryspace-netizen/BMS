@@ -43,20 +43,6 @@ active_connections: List[WebSocket] = []
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
-# CORS configuration - Allow Vercel frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://bms-eight-iota.vercel.app",
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "*"  # Allow all for development
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # Models
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -1406,10 +1392,23 @@ async def get_backup_info(user_data: dict = Depends(verify_token)):
 
 app.include_router(api_router)
 
+# CORS configuration - Allow Vercel frontend and localhost
+cors_origins = os.environ.get('CORS_ORIGINS', '*')
+if cors_origins == '*':
+    # If no specific origins set, allow these
+    allowed_origins = [
+        "https://bms-eight-iota.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "*"
+    ]
+else:
+    allowed_origins = cors_origins.split(',')
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
