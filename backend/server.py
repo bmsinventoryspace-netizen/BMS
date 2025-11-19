@@ -586,11 +586,15 @@ async def get_article(article_id: int, user_data: dict = Depends(verify_token)):
 async def get_public_articles():
     """Get public articles - with first photo for display (NO AUTH REQUIRED)"""
     try:
+        print("=== PUBLIC ARTICLES ENDPOINT CALLED ===")
+        
         # Récupérer tous les articles publics avec la première photo
         all_articles = await db.articles.find(
             {'public': True}, 
             {'_id': 0}  # Load all fields including photos
         ).sort('id', -1).to_list(1000)
+        
+        print(f"Found {len(all_articles)} public articles")
         
         # Filtrer ceux qui ont du stock (quantite > 0 pour pièces, litres > 0 pour liquides)
         articles = [
@@ -599,6 +603,8 @@ async def get_public_articles():
                (a.get('type') == 'liquide' and a.get('litres', 0) > 0)
         ]
         
+        print(f"Filtered to {len(articles)} articles with stock")
+        
         # Keep only first photo to reduce payload
         for article in articles:
             if article.get('photos') and len(article['photos']) > 0:
@@ -606,12 +612,14 @@ async def get_public_articles():
             else:
                 article['photos'] = []
         
+        print(f"Returning {len(articles)} articles")
         return articles
     except Exception as e:
+        print(f"!!! ERROR in public articles: {e}")
         logger.error(f"Error fetching public articles: {e}")
         import traceback
         traceback.print_exc()
-        return []
+        raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/articles/public/{article_id}")
 async def get_public_article(article_id: int):
