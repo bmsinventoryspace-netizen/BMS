@@ -15,61 +15,6 @@ const discountOf = (prix, prixRef) => {
   return pct > 0 ? pct : null;
 };
 
-// Component to load deal image on-demand
-const DealThumbnail = ({ dealId, dealNom }) => {
-  const [image, setImage] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [ref, setRef] = useState(null);
-
-  useEffect(() => {
-    if (!ref) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && loading) {
-          const loadImage = async () => {
-            try {
-              const token = localStorage.getItem('token');
-              const response = await axios.get(`${API}/deals/${dealId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
-              if (response.data.image) {
-                setImage(response.data.image);
-              }
-            } catch (error) {
-              console.error('Error loading deal image:', error);
-            } finally {
-              setLoading(false);
-            }
-          };
-          loadImage();
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1, rootMargin: '50px' }
-    );
-    
-    observer.observe(ref);
-    return () => observer.disconnect();
-  }, [ref, dealId, loading]);
-
-  return (
-    <div ref={setRef} className="w-full h-full">
-      {loading ? (
-        <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse flex items-center justify-center">
-          <span className="text-4xl font-bold text-gray-400">🔥</span>
-        </div>
-      ) : image ? (
-        <img src={image} alt={dealNom} className="w-full h-full object-cover" />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
-          <span className="text-4xl font-bold text-gray-400">🔥</span>
-        </div>
-      )}
-    </div>
-  );
-};
-
 const DealFire = () => {
   const { theme } = useTheme();
   const { socket } = useContext(AuthContext);
@@ -77,7 +22,6 @@ const DealFire = () => {
   const [selected, setSelected] = useState(null);
   const [hasNew, setHasNew] = useState(false);
   const [error, setError] = useState(null);
-  const [loadingDealDetails, setLoadingDealDetails] = useState(false);
 
   const loadDeals = async () => {
     try {
@@ -90,21 +34,6 @@ const DealFire = () => {
     } catch (e) {
       console.error('DealFire load error:', e);
       setError(e?.response?.data?.detail || 'Erreur de chargement');
-    }
-  };
-
-  const loadDealDetails = async (dealId) => {
-    try {
-      setLoadingDealDetails(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API}/deals/${dealId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setSelected(response.data);
-    } catch (error) {
-      console.error('Error loading deal details:', error);
-    } finally {
-      setLoadingDealDetails(false);
     }
   };
 
@@ -160,8 +89,8 @@ const DealFire = () => {
             return (
               <div key={d.id} className="glass rounded-2xl overflow-hidden shadow-md">
                 <div className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200">
-                  {d.has_image ? (
-                    <DealThumbnail dealId={d.id} dealNom={d.nom} />
+                  {d.image ? (
+                    <img src={d.image} alt={d.nom} className="w-full h-full object-cover" loading="lazy" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <span className="text-4xl font-bold text-gray-400">🔥</span>
@@ -189,7 +118,7 @@ const DealFire = () => {
                     </div>
                   )}
                   <div className="flex items-center justify-between">
-                    <Button className={`${theme.bg} ${theme.bgHover} text-white`} onClick={() => loadDealDetails(d.id)}>
+                    <Button className={`${theme.bg} ${theme.bgHover} text-white`} onClick={() => setSelected(d)}>
                       Voir
                     </Button>
                     {d.lien && (
@@ -205,14 +134,9 @@ const DealFire = () => {
         </div>
       )}
 
-      <Dialog open={!!selected || loadingDealDetails} onOpenChange={() => setSelected(null)}>
+      <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
         <DialogContent className="max-w-2xl">
-          {loadingDealDetails ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-              <p className="text-gray-500">Chargement des détails...</p>
-            </div>
-          ) : selected ? (
+          {selected && (
             <>
               <DialogHeader>
                 <DialogTitle className={`text-2xl ${theme.text}`}>{selected.nom}</DialogTitle>
@@ -235,7 +159,7 @@ const DealFire = () => {
                 )}
               </div>
             </>
-          ) : null}
+          )}
         </DialogContent>
       </Dialog>
     </Layout>

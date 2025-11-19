@@ -1021,46 +1021,9 @@ async def list_deals(user_data: dict = Depends(verify_token)):
     # Admin and employee can view
     if user_data['role'] not in ['admin', 'employee']:
         raise HTTPException(status_code=403, detail='Admin or employee only')
-    
-    # Projection: no images in list view for faster loading
-    projection = {
-        '_id': 0,
-        'id': 1,
-        'nom': 1,
-        'description': 1,
-        'prix': 1,
-        'prix_ref': 1,
-        'lien': 1,
-        'posted_by': 1,
-        'date': 1,
-        'disponible': 1
-    }
-    
-    deals = await db.deals.find({}, projection).sort('date', -1).allow_disk_use(True).to_list(1000)
-    
-    # Add has_image flag
-    deal_ids = [d['id'] for d in deals]
-    image_check = await db.deals.find(
-        {'id': {'$in': deal_ids}, 'image': {'$exists': True, '$ne': None, '$ne': ''}},
-        {'_id': 0, 'id': 1}
-    ).to_list(1000)
-    deals_with_images = {doc['id'] for doc in image_check}
-    
-    for deal in deals:
-        deal['has_image'] = deal['id'] in deals_with_images
-        deal['image'] = None  # Empty, will be loaded on demand
-    
+    # Return all deals with compressed images (already optimized at upload)
+    deals = await db.deals.find({}, {'_id': 0}).sort('date', -1).allow_disk_use(True).to_list(1000)
     return deals
-
-@api_router.get("/deals/{deal_id}")
-async def get_deal(deal_id: str, user_data: dict = Depends(verify_token)):
-    """Get full deal details including image"""
-    if user_data['role'] not in ['admin', 'employee']:
-        raise HTTPException(status_code=403, detail='Admin or employee only')
-    deal = await db.deals.find_one({'id': deal_id}, {'_id': 0})
-    if not deal:
-        raise HTTPException(status_code=404, detail='Deal not found')
-    return deal
 
 @api_router.get("/deals/mine", response_model=List[Deal])
 async def list_my_deals(user_data: dict = Depends(verify_token)):
