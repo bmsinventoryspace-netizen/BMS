@@ -28,18 +28,36 @@ const CatalogueGestion = () => {
   const fetchArticles = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API}/articles`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // Charger toutes les pages d'articles (sans limite pour la gestion)
+      let allArticles = [];
+      let page = 1;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const response = await axios.get(`${API}/articles?page=${page}&limit=100`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (response.data.articles && response.data.articles.length > 0) {
+          allArticles = [...allArticles, ...response.data.articles];
+          page++;
+          hasMore = page <= response.data.total_pages;
+        } else {
+          hasMore = false;
+        }
+      }
+      
       // Filtrer uniquement les articles publics avec stock > 0
-      const publicArticles = response.data.filter(a => 
+      const publicArticles = allArticles.filter(a => 
         a.public && 
         ((a.type === 'piece' && a.quantite > 0) || 
          (a.type === 'liquide' && a.litres > 0))
       );
       setArticles(publicArticles);
     } catch (error) {
+      console.error('Error loading articles:', error);
       toast.error('Erreur de chargement');
+      setArticles([]);
     }
   };
 
