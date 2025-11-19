@@ -56,7 +56,25 @@ const CatalogueGestion = () => {
       const publicArticles = allArticles.filter(a => a.public === true);
       
       console.log('Public articles (all):', publicArticles.length);
-      setArticles(publicArticles);
+      
+      // Charger les photos pour les articles publics
+      const articlesWithPhotos = await Promise.all(
+        publicArticles.map(async (article) => {
+          if (article.has_photo) {
+            try {
+              const detailResponse = await axios.get(`${API}/articles/${article.id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              return { ...article, photos: detailResponse.data.photos || [] };
+            } catch (err) {
+              return article;
+            }
+          }
+          return article;
+        })
+      );
+      
+      setArticles(articlesWithPhotos);
     } catch (error) {
       console.error('Error loading articles:', error);
       toast.error('Erreur de chargement');

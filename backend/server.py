@@ -584,31 +584,12 @@ async def get_article(article_id: int, user_data: dict = Depends(verify_token)):
 
 @api_router.get("/articles/public")
 async def get_public_articles():
-    """Get public articles - optimized with projection (no photos in list)"""
+    """Get public articles - with first photo for display"""
     try:
-        # Projection: only essential fields for catalogue display
-        projection = {
-            '_id': 0,
-            'id': 1,
-            'nom': 1,
-            'ref': 1,
-            'sku': 1,
-            'categorie': 1,
-            'sous_categorie': 1,
-            'etat': 1,
-            'type': 1,
-            'public': 1,
-            'quantite': 1,
-            'litres': 1,
-            'prix_vente': 1,
-            'marque': 1,
-            'description': 1
-        }
-        
-        # Récupérer tous les articles publics (compound index on public+id should handle this)
+        # Récupérer tous les articles publics avec la première photo
         all_articles = await db.articles.find(
             {'public': True}, 
-            projection
+            {'_id': 0}  # Load all fields including photos
         ).sort('id', -1).to_list(1000)
         
         # Filtrer ceux qui ont du stock (quantite > 0 pour pièces, litres > 0 pour liquides)
@@ -618,18 +599,12 @@ async def get_public_articles():
                (a.get('type') == 'liquide' and a.get('litres', 0) > 0)
         ]
         
-        # Add has_photo flag
-        if articles:
-            article_ids = [a['id'] for a in articles]
-            photos_check = await db.articles.find(
-                {'id': {'$in': article_ids}, 'photos.0': {'$exists': True}},
-                {'_id': 0, 'id': 1}
-            ).to_list(1000)
-            articles_with_photos = {doc['id'] for doc in photos_check}
-            
-            for article in articles:
-                article['has_photo'] = article['id'] in articles_with_photos
-                article['photos'] = []  # Empty array, will be loaded on demand
+        # Keep only first photo to reduce payload
+        for article in articles:
+            if article.get('photos') and len(article['photos']) > 0:
+                article['photos'] = [article['photos'][0]]  # Keep only first photo
+            else:
+                article['photos'] = []
         
         return articles
     except Exception as e:
