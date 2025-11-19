@@ -12,6 +12,68 @@ import { LazyLoadImage } from 'react-lazy-load-image-component';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Component to load liquide photo on-demand
+const LiquideThumbnail = ({ liquideId, liquideNom }) => {
+  const [photo, setPhoto] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [ref, setRef] = useState(null);
+
+  useEffect(() => {
+    if (!ref) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && loading) {
+          const loadPhoto = async () => {
+            try {
+              const token = localStorage.getItem('token');
+              const response = await axios.get(`${API}/articles/${liquideId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              if (response.data.photos && response.data.photos.length > 0) {
+                setPhoto(response.data.photos[0]);
+              }
+            } catch (error) {
+              console.error('Error loading photo:', error);
+            } finally {
+              setLoading(false);
+            }
+          };
+          loadPhoto();
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+    
+    observer.observe(ref);
+    return () => observer.disconnect();
+  }, [ref, liquideId, loading]);
+
+  return (
+    <div ref={setRef} className="w-full h-full">
+      {loading ? (
+        <div className="w-full h-full bg-gradient-to-br from-blue-100 to-blue-200 animate-pulse flex items-center justify-center">
+          <Droplet className="w-12 h-12 text-blue-400" />
+        </div>
+      ) : photo ? (
+        <LazyLoadImage
+          src={photo}
+          alt={liquideNom}
+          effect="blur"
+          className="w-full h-full object-cover"
+          threshold={200}
+          placeholder={<div className="w-full h-full bg-blue-100 animate-pulse" />}
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-200">
+          <Droplet className="w-12 h-12 text-blue-600" />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Huiles = () => {
   const [liquides, setLiquides] = useState([]);
   const [filteredLiquides, setFilteredLiquides] = useState([]);
@@ -215,13 +277,8 @@ const Huiles = () => {
                   data-testid={`liquide-card-${liquide.id}`}
                 >
                 <div className="relative aspect-video bg-gradient-to-br from-blue-100 to-blue-200">
-                  {liquide.photos && liquide.photos.length > 0 ? (
-                    <LazyLoadImage
-                      src={liquide.photos[0]}
-                      alt={liquide.nom}
-                      effect="blur"
-                      className="w-full h-full object-cover"
-                    />
+                  {liquide.has_photo ? (
+                    <LiquideThumbnail liquideId={liquide.id} liquideNom={liquide.nom} />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Droplet className="w-16 h-16 text-blue-400" />

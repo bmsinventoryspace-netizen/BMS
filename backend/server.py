@@ -582,51 +582,58 @@ async def get_article(article_id: int, user_data: dict = Depends(verify_token)):
 @api_router.get("/articles/public")
 async def get_public_articles():
     """Get public articles - optimized with projection (no photos in list)"""
-    # Projection: only essential fields for catalogue display
-    projection = {
-        '_id': 0,
-        'id': 1,
-        'nom': 1,
-        'ref': 1,
-        'sku': 1,
-        'categorie': 1,
-        'sous_categorie': 1,
-        'etat': 1,
-        'type': 1,
-        'public': 1,
-        'quantite': 1,
-        'litres': 1,
-        'prix_vente': 1,
-        'marque': 1,
-        'description': 1
-    }
-    
-    # Récupérer tous les articles publics (compound index on public+id should handle this)
-    all_articles = await db.articles.find(
-        {'public': True}, 
-        projection
-    ).sort('id', -1).allow_disk_use(True).to_list(1000)
-    
-    # Filtrer ceux qui ont du stock (quantite > 0 pour pièces, litres > 0 pour liquides)
-    articles = [
-        a for a in all_articles 
-        if (a.get('type') == 'piece' and a.get('quantite', 0) > 0) or 
-           (a.get('type') == 'liquide' and a.get('litres', 0) > 0)
-    ]
-    
-    # Add has_photo flag
-    article_ids = [a['id'] for a in articles]
-    photos_check = await db.articles.find(
-        {'id': {'$in': article_ids}, 'photos.0': {'$exists': True}},
-        {'_id': 0, 'id': 1}
-    ).to_list(1000)
-    articles_with_photos = {doc['id'] for doc in photos_check}
-    
-    for article in articles:
-        article['has_photo'] = article['id'] in articles_with_photos
-        article['photos'] = []  # Empty array, will be loaded on demand
-    
-    return articles
+    try:
+        # Projection: only essential fields for catalogue display
+        projection = {
+            '_id': 0,
+            'id': 1,
+            'nom': 1,
+            'ref': 1,
+            'sku': 1,
+            'categorie': 1,
+            'sous_categorie': 1,
+            'etat': 1,
+            'type': 1,
+            'public': 1,
+            'quantite': 1,
+            'litres': 1,
+            'prix_vente': 1,
+            'marque': 1,
+            'description': 1
+        }
+        
+        # Récupérer tous les articles publics (compound index on public+id should handle this)
+        all_articles = await db.articles.find(
+            {'public': True}, 
+            projection
+        ).sort('id', -1).to_list(1000)
+        
+        # Filtrer ceux qui ont du stock (quantite > 0 pour pièces, litres > 0 pour liquides)
+        articles = [
+            a for a in all_articles 
+            if (a.get('type') == 'piece' and a.get('quantite', 0) > 0) or 
+               (a.get('type') == 'liquide' and a.get('litres', 0) > 0)
+        ]
+        
+        # Add has_photo flag
+        if articles:
+            article_ids = [a['id'] for a in articles]
+            photos_check = await db.articles.find(
+                {'id': {'$in': article_ids}, 'photos.0': {'$exists': True}},
+                {'_id': 0, 'id': 1}
+            ).to_list(1000)
+            articles_with_photos = {doc['id'] for doc in photos_check}
+            
+            for article in articles:
+                article['has_photo'] = article['id'] in articles_with_photos
+                article['photos'] = []  # Empty array, will be loaded on demand
+        
+        return articles
+    except Exception as e:
+        logger.error(f"Error fetching public articles: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
 
 @api_router.get("/articles/public/{article_id}")
 async def get_public_article(article_id: int):
@@ -1122,10 +1129,14 @@ async def get_marques(user_data: dict = Depends(verify_token)):
 @api_router.get("/marques-public")
 async def get_marques_public():
     """Get unique marques from public articles - no auth required"""
-    articles = await db.articles.find(
-        {'public': True, 'marque': {'$exists': True, '$ne': None, '$ne': ''}},
-        {'_id': 0, 'marque': 1}
-    ).allow_disk_use(True).to_list(10000)
+    try:
+        articles = await db.articles.find(
+            {'public': True, 'marque': {'$exists': True, '$ne': None, '$ne': ''}},
+            {'_id': 0, 'marque': 1}
+        ).to_list(10000)
+    except Exception as e:
+        logger.warning(f"Error fetching marques-public: {e}")
+        return []
     
     marques = set()
     for article in articles:
