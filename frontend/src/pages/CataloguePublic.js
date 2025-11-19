@@ -142,14 +142,14 @@ const CataloguePublic = () => {
       setCategories(response.data.categories || []);
       setSousCategories(response.data.sous_categories || []);
       
-      // Récupérer les marques depuis l'endpoint dédié
-      try {
-        const marquesResponse = await axios.get(`${API}/marques-public`);
-        setMarques(Array.isArray(marquesResponse.data) ? marquesResponse.data : []);
-      } catch (marquesError) {
-        console.error('Error fetching marques:', marquesError);
-        setMarques([]);
-      }
+      // Extraire les marques depuis les articles déjà chargés
+      const uniqueMarques = [...new Set(
+        articles
+          .map(a => a.marque)
+          .filter(m => m && m.trim())
+          .map(m => m.trim())
+      )].sort();
+      setMarques(uniqueMarques);
     } catch (error) {
       console.error('Error fetching categories:', error);
       setCategories([]);
