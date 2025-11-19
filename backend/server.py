@@ -543,7 +543,10 @@ async def get_articles(
         'etat': 1,
         'type': 1,
         'public': 1,
-        'litres': 1,
+        'quantite': 1,  # IMPORTANT: needed for filtering
+        'litres': 1,     # IMPORTANT: needed for filtering
+        'prix_vente': 1,
+        'marque': 1,
         'photos': {'$slice': 0}  # Get empty array but preserve field to check existence
     }
     
