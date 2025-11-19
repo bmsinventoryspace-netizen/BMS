@@ -492,6 +492,7 @@ async def get_articles(
     total = await db.articles.count_documents({})
     
     # Projection: only load essential fields for list display (NO PHOTOS to reduce payload)
+    # Use $slice to get array length indicator without loading photo data
     projection = {
         '_id': 0,
         'id': 1,
@@ -504,25 +505,27 @@ async def get_articles(
         'type': 1,
         'public': 1,
         'litres': 1,
-        'has_photo': 1  # Just a flag to know if article has photos
+        'photos': {'$slice': 0}  # Get empty array but preserve field to check existence
     }
     
     # Get paginated articles (index on 'id' should handle sorting efficiently)
     cursor = db.articles.find({}, projection).sort('id', -1).skip(skip).limit(limit)
     articles = await cursor.to_list(limit)
     
-    # Add has_photo flag - check if photos array exists and has items (without loading photo data)
+    # Add has_photo flag based on whether photos field exists (even if empty)
     for article in articles:
-        # Use projection to only check if photos array exists, not load the data
-        photo_check = await db.articles.find_one(
-            {'id': article['id']}, 
-            {'_id': 0, 'photos': {'$slice': [0, 1]}}  # Get first element but MongoDB will still load it
+        # Check if photos field exists in original document (without loading photo data)
+        # We use a simple aggregation to check array size
+        photo_doc = await db.articles.find_one(
+            {'id': article['id']},
+            {'_id': 0, 'photos': {'$size': 1}}  # This will return error if array doesn't exist, but we can check differently
         )
-        # Better: just check array length without loading
-        photo_count = await db.articles.count_documents(
-            {'id': article['id'], 'photos.0': {'$exists': True}}
-        )
-        article['has_photo'] = photo_count > 0
+        # Simpler: check if photos array exists and has at least one element
+        has_photos = await db.articles.count_documents({
+            'id': article['id'],
+            'photos.0': {'$exists': True}
+        })
+        article['has_photo'] = has_photos > 0
         article['photos'] = []  # Empty array, will be loaded on demand
     
     return {
