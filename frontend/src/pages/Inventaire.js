@@ -17,6 +17,66 @@ import { LazyLoadImage } from 'react-lazy-load-image-component';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Component to load article photo on-demand only when visible (IntersectionObserver)
+const ArticleThumbnail = ({ articleId, articleNom }) => {
+  const [photo, setPhoto] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [ref, setRef] = useState(null);
+
+  useEffect(() => {
+    if (!ref) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && loading) {
+          const loadPhoto = async () => {
+            try {
+              const token = localStorage.getItem('token');
+              const response = await axios.get(`${API}/articles/${articleId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              if (response.data.photos && response.data.photos.length > 0) {
+                setPhoto(response.data.photos[0]);
+              }
+            } catch (error) {
+              console.error('Error loading photo:', error);
+            } finally {
+              setLoading(false);
+            }
+          };
+          loadPhoto();
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+    
+    observer.observe(ref);
+    return () => observer.disconnect();
+  }, [ref, articleId, loading]);
+
+  return (
+    <div ref={setRef} className="w-full h-full">
+      {loading ? (
+        <div className="w-full h-full bg-gray-200 animate-pulse" />
+      ) : photo ? (
+        <LazyLoadImage
+          src={photo}
+          alt={articleNom}
+          effect="blur"
+          className="w-full h-full object-cover"
+          threshold={200}
+          placeholder={<div className="w-full h-full bg-gray-200 animate-pulse" />}
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          <span className="text-4xl font-bold text-gray-400">B</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Inventaire = () => {
   const { user } = useContext(AuthContext);
   const { theme } = useTheme();
