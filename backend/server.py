@@ -574,14 +574,7 @@ async def get_articles(
         'total_pages': (total + limit - 1) // limit
     }
 
-@api_router.get("/articles/{article_id}")
-async def get_article(article_id: int, user_data: dict = Depends(verify_token)):
-    """Get full article details by ID"""
-    article = await db.articles.find_one({'id': article_id}, {'_id': 0})
-    if not article:
-        raise HTTPException(status_code=404, detail='Article not found')
-    return article
-
+# PUBLIC ROUTES MUST COME BEFORE PARAMETERIZED ROUTES
 @api_router.get("/articles/public")
 async def get_public_articles():
     """Get public articles - with first photo for display (NO AUTH REQUIRED)"""
@@ -625,6 +618,15 @@ async def get_public_articles():
 async def get_public_article(article_id: int):
     """Get full public article details including photos"""
     article = await db.articles.find_one({'id': article_id, 'public': True}, {'_id': 0})
+    if not article:
+        raise HTTPException(status_code=404, detail='Article not found')
+    return article
+
+# PROTECTED ROUTES (require authentication)
+@api_router.get("/articles/{article_id}")
+async def get_article(article_id: int, user_data: dict = Depends(verify_token)):
+    """Get full article details by ID (authenticated)"""
+    article = await db.articles.find_one({'id': article_id}, {'_id': 0})
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
     return article
