@@ -1049,15 +1049,8 @@ const Inventaire = () => {
               data-testid={`article-card-${article.id}`}
             >
               <div className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200">
-                {article.photos && article.photos.length > 0 ? (
-                  <LazyLoadImage
-                    src={article.photos[0]}
-                    alt={article.nom}
-                    effect="blur"
-                    className="w-full h-full object-cover"
-                    threshold={200}
-                    placeholder={<div className="w-full h-full bg-gray-200 animate-pulse" />}
-                  />
+                {article.has_photo ? (
+                  <ArticleThumbnail articleId={article.id} articleNom={article.nom} />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <span className="text-4xl font-bold text-gray-400">B</span>
