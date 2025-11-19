@@ -512,20 +512,16 @@ async def get_articles(
     cursor = db.articles.find({}, projection).sort('id', -1).skip(skip).limit(limit)
     articles = await cursor.to_list(limit)
     
-    # Add has_photo flag based on whether photos field exists (even if empty)
+    # Add has_photo flag - use single query to check all articles at once
+    article_ids = [a['id'] for a in articles]
+    photos_check = await db.articles.find(
+        {'id': {'$in': article_ids}, 'photos.0': {'$exists': True}},
+        {'_id': 0, 'id': 1}
+    ).to_list(100)
+    articles_with_photos = {doc['id'] for doc in photos_check}
+    
     for article in articles:
-        # Check if photos field exists in original document (without loading photo data)
-        # We use a simple aggregation to check array size
-        photo_doc = await db.articles.find_one(
-            {'id': article['id']},
-            {'_id': 0, 'photos': {'$size': 1}}  # This will return error if array doesn't exist, but we can check differently
-        )
-        # Simpler: check if photos array exists and has at least one element
-        has_photos = await db.articles.count_documents({
-            'id': article['id'],
-            'photos.0': {'$exists': True}
-        })
-        article['has_photo'] = has_photos > 0
+        article['has_photo'] = article['id'] in articles_with_photos
         article['photos'] = []  # Empty array, will be loaded on demand
     
     return {
