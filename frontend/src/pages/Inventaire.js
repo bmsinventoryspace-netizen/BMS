@@ -1226,7 +1226,12 @@ const Inventaire = () => {
       {/* Modal de visualisation d'article */}
       <Dialog open={!!selectedArticleView} onOpenChange={() => setSelectedArticleView(null)}>
         <DialogContent className="w-[95vw] sm:max-w-4xl h-[85vh] sm:max-h-[90vh] overflow-y-auto p-3 sm:p-6">
-          {selectedArticleView && (
+          {loadingArticleDetails ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+              <p className="text-gray-500">Chargement des détails...</p>
+            </div>
+          ) : selectedArticleView && (
             <>
               <DialogHeader>
                 <DialogTitle className={`text-2xl ${theme.text}`}>
