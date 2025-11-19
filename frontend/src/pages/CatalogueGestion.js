@@ -16,6 +16,7 @@ const CatalogueGestion = () => {
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedArticle, setSelectedArticle] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchArticles();
@@ -27,7 +28,9 @@ const CatalogueGestion = () => {
 
   const fetchArticles = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem('token');
+      
       // Charger toutes les pages d'articles (sans limite pour la gestion)
       let allArticles = [];
       let page = 1;
@@ -38,26 +41,32 @@ const CatalogueGestion = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        if (response.data.articles && response.data.articles.length > 0) {
+        if (response.data && response.data.articles && response.data.articles.length > 0) {
           allArticles = [...allArticles, ...response.data.articles];
           page++;
-          hasMore = page <= response.data.total_pages;
+          hasMore = page <= (response.data.total_pages || 1);
         } else {
           hasMore = false;
         }
       }
       
+      console.log('Total articles loaded:', allArticles.length);
+      
       // Filtrer uniquement les articles publics avec stock > 0
       const publicArticles = allArticles.filter(a => 
         a.public && 
-        ((a.type === 'piece' && a.quantite > 0) || 
-         (a.type === 'liquide' && a.litres > 0))
+        ((a.type === 'piece' && (a.quantite || 0) > 0) || 
+         (a.type === 'liquide' && (a.litres || 0) > 0))
       );
+      
+      console.log('Public articles with stock:', publicArticles.length);
       setArticles(publicArticles);
     } catch (error) {
       console.error('Error loading articles:', error);
       toast.error('Erreur de chargement');
       setArticles([]);
+    } finally {
+      setLoading(false);
     }
   };
 
