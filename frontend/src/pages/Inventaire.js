@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '../components/ui/label';
 import { Checkbox } from '../components/ui/checkbox';
 import { toast } from 'sonner';
-import { Plus, Search, Download, ExternalLink, Trash2, Edit } from 'lucide-react';
+import { Plus, Search, Download, ExternalLink, Trash2, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -22,6 +22,10 @@ const Inventaire = () => {
   const { theme } = useTheme();
   const [articles, setArticles] = useState([]);
   const [filteredArticles, setFilteredArticles] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalArticles, setTotalArticles] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSousCategory, setSelectedSousCategory] = useState('all');
@@ -73,21 +77,30 @@ const Inventaire = () => {
   }
 
   useEffect(() => {
-    fetchArticles();
+    fetchArticles(currentPage);
     fetchCategories();
     fetchMarques();
-  }, []);
+  }, [currentPage]);
 
   useEffect(() => {
     filterArticles();
   }, [articles, searchTerm, selectedCategory, selectedSousCategory, selectedEtat, selectedType, selectedSousCategoryFilter]);
 
-  const fetchArticles = async () => {
+  const fetchArticles = async (page = 1) => {
     try {
-      const response = await axios.get(`${API}/articles`);
-      setArticles(response.data);
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/articles?page=${page}&limit=30`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setArticles(response.data.articles || []);
+      setTotalPages(response.data.total_pages || 1);
+      setTotalArticles(response.data.total || 0);
+      setCurrentPage(response.data.page || 1);
     } catch (error) {
       toast.error('Erreur de chargement');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -232,7 +245,7 @@ const Inventaire = () => {
       setSelectedArticle(null);
       setFormData(getEmptyFormData());
       setPhotos([]);
-      fetchArticles();
+      fetchArticles(currentPage);
       fetchCategories();
     } catch (error) {
       toast.error('Erreur lors de l\'enregistrement');
@@ -245,7 +258,7 @@ const Inventaire = () => {
     try {
       await axios.delete(`${API}/articles/${id}`);
       toast.success('Article supprimé');
-      fetchArticles();
+      fetchArticles(currentPage);
     } catch (error) {
       toast.error('Erreur de suppression');
     }
@@ -1122,7 +1135,71 @@ const Inventaire = () => {
           ))}
         </div>
 
-        {filteredArticles.length === 0 && (
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-8 mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1 || loading}
+              className={theme.borderInput}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+                
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNum)}
+                    disabled={loading}
+                    className={currentPage === pageNum ? `${theme.bg} ${theme.bgHover} text-white` : theme.borderInput}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages || loading}
+              className={theme.borderInput}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+            
+            <span className={`text-sm ${theme.textLight} ml-4`}>
+              Page {currentPage} sur {totalPages} ({totalArticles} articles)
+            </span>
+          </div>
+        )}
+
+        {loading && (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+            <p className="text-gray-500">Chargement...</p>
+          </div>
+        )}
+
+        {!loading && filteredArticles.length === 0 && (
           <div className="text-center py-12 glass rounded-2xl">
             <p className="text-gray-500">Aucun article trouvé</p>
           </div>

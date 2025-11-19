@@ -479,11 +479,29 @@ async def delete_user(username: str, user_data: dict = Depends(verify_token)):
     return {'message': 'User deleted successfully'}
 
 # Articles/Inventory
-@api_router.get("/articles", response_model=List[Article])
-async def get_articles(user_data: dict = Depends(verify_token)):
-    # Index on 'id' should handle sorting efficiently
-    articles = await db.articles.find({}, {'_id': 0}).sort('id', -1).to_list(10000)
-    return articles
+@api_router.get("/articles")
+async def get_articles(
+    page: int = 1,
+    limit: int = 30,
+    user_data: dict = Depends(verify_token)
+):
+    """Get articles with pagination"""
+    skip = (page - 1) * limit
+    
+    # Get total count
+    total = await db.articles.count_documents({})
+    
+    # Get paginated articles (index on 'id' should handle sorting efficiently)
+    cursor = db.articles.find({}, {'_id': 0}).sort('id', -1).skip(skip).limit(limit)
+    articles = await cursor.to_list(limit)
+    
+    return {
+        'articles': articles,
+        'total': total,
+        'page': page,
+        'limit': limit,
+        'total_pages': (total + limit - 1) // limit
+    }
 
 @api_router.get("/articles/public")
 async def get_public_articles():
