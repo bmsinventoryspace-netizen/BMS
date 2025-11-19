@@ -584,7 +584,7 @@ async def get_article(article_id: int, user_data: dict = Depends(verify_token)):
 
 @api_router.get("/articles/public")
 async def get_public_articles():
-    """Get public articles - with first photo for display"""
+    """Get public articles - with first photo for display (NO AUTH REQUIRED)"""
     try:
         # Récupérer tous les articles publics avec la première photo
         all_articles = await db.articles.find(
