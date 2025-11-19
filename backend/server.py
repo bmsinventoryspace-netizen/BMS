@@ -485,15 +485,42 @@ async def get_articles(
     limit: int = 30,
     user_data: dict = Depends(verify_token)
 ):
-    """Get articles with pagination"""
+    """Get articles with pagination - only essential fields for list view"""
     skip = (page - 1) * limit
     
     # Get total count
     total = await db.articles.count_documents({})
     
+    # Projection: only load essential fields for list display
+    projection = {
+        '_id': 0,
+        'id': 1,
+        'nom': 1,
+        'ref': 1,
+        'sku': 1,
+        'categorie': 1,
+        'sous_categorie': 1,
+        'etat': 1,
+        'type': 1,
+        'public': 1,
+        'litres': 1,
+        'photos': 1  # We'll limit to first photo after
+    }
+    
     # Get paginated articles (index on 'id' should handle sorting efficiently)
-    cursor = db.articles.find({}, {'_id': 0}).sort('id', -1).skip(skip).limit(limit)
+    cursor = db.articles.find({}, projection).sort('id', -1).skip(skip).limit(limit)
     articles = await cursor.to_list(limit)
+    
+    # Limit photos to first one only and optimize base64 size
+    for article in articles:
+        if article.get('photos') and len(article['photos']) > 0:
+            # Keep only first photo
+            first_photo = article['photos'][0]
+            # If it's a large base64 string, we can't compress without re-processing
+            # But we ensure only one photo is sent
+            article['photos'] = [first_photo]
+        else:
+            article['photos'] = []
     
     return {
         'articles': articles,
@@ -502,6 +529,14 @@ async def get_articles(
         'limit': limit,
         'total_pages': (total + limit - 1) // limit
     }
+
+@api_router.get("/articles/{article_id}")
+async def get_article(article_id: int, user_data: dict = Depends(verify_token)):
+    """Get full article details by ID"""
+    article = await db.articles.find_one({'id': article_id}, {'_id': 0})
+    if not article:
+        raise HTTPException(status_code=404, detail='Article not found')
+    return article
 
 @api_router.get("/articles/public")
 async def get_public_articles():

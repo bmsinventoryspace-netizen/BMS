@@ -46,6 +46,7 @@ const Inventaire = () => {
   const [showNewMarqueInput, setShowNewMarqueInput] = useState(false);
   const [newMarqueName, setNewMarqueName] = useState('');
   const [selectedArticleView, setSelectedArticleView] = useState(null);
+  const [loadingArticleDetails, setLoadingArticleDetails] = useState(false);
   const [remisePercentage, setRemisePercentage] = useState('');
 
   const etats = ['Comme neuf', 'Très bon état', 'Bon état', 'État acceptable', 'Usé', 'Mauvais état', 'Très mauvais état'];
@@ -1108,7 +1109,23 @@ const Inventaire = () => {
                     size="sm"
                     variant="outline"
                     className="flex-1"
-                    onClick={() => setSelectedArticleView(article)}
+                    onClick={async () => {
+                      // Load full article details when opening modal
+                      setLoadingArticleDetails(true);
+                      try {
+                        const token = localStorage.getItem('token');
+                        const response = await axios.get(`${API}/articles/${article.id}`, {
+                          headers: { Authorization: `Bearer ${token}` }
+                        });
+                        setSelectedArticleView(response.data);
+                      } catch (error) {
+                        toast.error('Erreur de chargement des détails');
+                        // Fallback to basic article data
+                        setSelectedArticleView(article);
+                      } finally {
+                        setLoadingArticleDetails(false);
+                      }
+                    }}
                     data-testid={`view-article-${article.id}`}
                   >
                     👁️ Voir
