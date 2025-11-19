@@ -29,9 +29,11 @@ const Huiles = () => {
 
   const fetchLiquides = async () => {
     try {
-      const response = await axios.get(`${API}/articles`);
-      const liquidesOnly = response.data.filter(a => a.type === 'liquide');
-      setLiquides(liquidesOnly);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/articles/liquides`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setLiquides(response.data || []);
     } catch (error) {
       toast.error('Erreur de chargement');
     }

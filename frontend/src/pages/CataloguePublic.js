@@ -15,6 +15,63 @@ import 'react-lazy-load-image-component/src/effects/blur.css';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Component to load article photo on-demand (for public catalogue)
+const ArticleThumbnailPublic = ({ articleId, articleNom }) => {
+  const [photo, setPhoto] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [ref, setRef] = useState(null);
+
+  useEffect(() => {
+    if (!ref) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && loading) {
+          const loadPhoto = async () => {
+            try {
+              const response = await axios.get(`${API}/articles/public/${articleId}`);
+              if (response.data.photos && response.data.photos.length > 0) {
+                setPhoto(response.data.photos[0]);
+              }
+            } catch (error) {
+              console.error('Error loading photo:', error);
+            } finally {
+              setLoading(false);
+            }
+          };
+          loadPhoto();
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+    
+    observer.observe(ref);
+    return () => observer.disconnect();
+  }, [ref, articleId, loading]);
+
+  return (
+    <div ref={setRef} className="w-full h-full">
+      {loading ? (
+        <div className="w-full h-full bg-gray-200 animate-pulse" />
+      ) : photo ? (
+        <LazyLoadImage
+          src={photo}
+          alt={articleNom}
+          effect="blur"
+          className="w-full h-full object-cover"
+          threshold={200}
+          placeholder={<div className="w-full h-full bg-gray-200 animate-pulse" />}
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+          <span className="text-4xl font-bold text-gray-400">B</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const CataloguePublic = () => {
   const [articles, setArticles] = useState([]);
   const [pubs, setPubs] = useState([]);
@@ -84,14 +141,9 @@ const CataloguePublic = () => {
       setCategories(response.data.categories || []);
       setSousCategories(response.data.sous_categories || []);
       
-      // Récupérer les marques depuis les articles
-      const articlesResponse = await axios.get(`${API}/articles/public`);
-      const allMarques = articlesResponse.data
-        .map(article => article.marque)
-        .filter(marque => marque && marque.trim())
-        .map(marque => marque.trim());
-      const uniqueMarques = [...new Set(allMarques)].sort();
-      setMarques(uniqueMarques);
+      // Récupérer les marques depuis l'endpoint dédié
+      const marquesResponse = await axios.get(`${API}/marques-public`);
+      setMarques(marquesResponse.data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
@@ -388,23 +440,22 @@ const CataloguePublic = () => {
                 <div
                   key={article.id}
                   className="glass rounded-2xl overflow-hidden shadow-md hover-lift cursor-pointer"
-                  onClick={() => {
-                    setSelectedArticle(article);
-                    // Track view
-                    axios.post(`${API}/articles/${article.id}/view`).catch(console.error);
+                  onClick={async () => {
+                    // Load full article details with photos
+                    try {
+                      const response = await axios.get(`${API}/articles/public/${article.id}`);
+                      setSelectedArticle(response.data);
+                      // Track view
+                      axios.post(`${API}/articles/${article.id}/view`).catch(console.error);
+                    } catch (error) {
+                      console.error('Error loading article details:', error);
+                    }
                   }}
                   data-testid={`article-${article.id}`}
                 >
                   <div className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200">
-                    {article.photos && article.photos.length > 0 ? (
-                      <LazyLoadImage
-                        src={article.photos[0]}
-                        alt={article.nom}
-                        effect="blur"
-                        className="w-full h-full object-cover"
-                        threshold={200}
-                        placeholder={<div className="w-full h-full bg-gray-200 animate-pulse" />}
-                      />
+                    {article.has_photo ? (
+                      <ArticleThumbnailPublic articleId={article.id} articleNom={article.nom} />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <span className="text-4xl font-bold text-gray-400">B</span>

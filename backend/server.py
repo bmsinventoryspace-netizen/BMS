@@ -479,6 +479,45 @@ async def delete_user(username: str, user_data: dict = Depends(verify_token)):
     return {'message': 'User deleted successfully'}
 
 # Articles/Inventory
+@api_router.get("/articles/liquides")
+async def get_liquides(user_data: dict = Depends(verify_token)):
+    """Get all liquides - optimized for Huiles page"""
+    projection = {
+        '_id': 0,
+        'id': 1,
+        'nom': 1,
+        'ref': 1,
+        'sku': 1,
+        'categorie': 1,
+        'type': 1,
+        'litres': 1,
+        'quantite_min': 1,
+        'usage_hebdo': 1,
+        'viscosite': 1,
+        'marque': 1,
+        'norme': 1,
+        'usage': 1
+    }
+    
+    liquides = await db.articles.find(
+        {'type': 'liquide'}, 
+        projection
+    ).sort('id', -1).allow_disk_use(True).to_list(10000)
+    
+    # Add has_photo flag
+    article_ids = [a['id'] for a in liquides]
+    photos_check = await db.articles.find(
+        {'id': {'$in': article_ids}, 'photos.0': {'$exists': True}},
+        {'_id': 0, 'id': 1}
+    ).to_list(10000)
+    articles_with_photos = {doc['id'] for doc in photos_check}
+    
+    for liquide in liquides:
+        liquide['has_photo'] = liquide['id'] in articles_with_photos
+        liquide['photos'] = []
+    
+    return liquides
+
 @api_router.get("/articles")
 async def get_articles(
     page: int = 1,
@@ -542,15 +581,60 @@ async def get_article(article_id: int, user_data: dict = Depends(verify_token)):
 
 @api_router.get("/articles/public")
 async def get_public_articles():
+    """Get public articles - optimized with projection (no photos in list)"""
+    # Projection: only essential fields for catalogue display
+    projection = {
+        '_id': 0,
+        'id': 1,
+        'nom': 1,
+        'ref': 1,
+        'sku': 1,
+        'categorie': 1,
+        'sous_categorie': 1,
+        'etat': 1,
+        'type': 1,
+        'public': 1,
+        'quantite': 1,
+        'litres': 1,
+        'prix_vente': 1,
+        'marque': 1,
+        'description': 1
+    }
+    
     # Récupérer tous les articles publics (compound index on public+id should handle this)
-    all_articles = await db.articles.find({'public': True}, {'_id': 0}).sort('id', -1).to_list(1000)
+    all_articles = await db.articles.find(
+        {'public': True}, 
+        projection
+    ).sort('id', -1).allow_disk_use(True).to_list(1000)
+    
     # Filtrer ceux qui ont du stock (quantite > 0 pour pièces, litres > 0 pour liquides)
     articles = [
         a for a in all_articles 
         if (a.get('type') == 'piece' and a.get('quantite', 0) > 0) or 
            (a.get('type') == 'liquide' and a.get('litres', 0) > 0)
     ]
+    
+    # Add has_photo flag
+    article_ids = [a['id'] for a in articles]
+    photos_check = await db.articles.find(
+        {'id': {'$in': article_ids}, 'photos.0': {'$exists': True}},
+        {'_id': 0, 'id': 1}
+    ).to_list(1000)
+    articles_with_photos = {doc['id'] for doc in photos_check}
+    
+    for article in articles:
+        article['has_photo'] = article['id'] in articles_with_photos
+        article['photos'] = []  # Empty array, will be loaded on demand
+    
     return articles
+
+@api_router.get("/articles/public/{article_id}")
+async def get_public_article(article_id: int):
+    """Get full public article details including photos"""
+    article = await db.articles.find_one({'id': article_id, 'public': True}, {'_id': 0})
+    if not article:
+        raise HTTPException(status_code=404, detail='Article not found')
+    return article
 
 @api_router.post("/articles")
 async def create_article(article: ArticleCreate, user_data: dict = Depends(verify_token)):
@@ -931,7 +1015,8 @@ async def list_deals(user_data: dict = Depends(verify_token)):
     if user_data['role'] not in ['admin', 'employee']:
         raise HTTPException(status_code=403, detail='Admin or employee only')
     # Index on date should handle sorting efficiently
-    deals = await db.deals.find({}, {'_id': 0}).sort('date', -1).to_list(1000)
+    # Compress images to reduce payload
+    deals = await db.deals.find({}, {'_id': 0}).sort('date', -1).allow_disk_use(True).to_list(1000)
     return deals
 
 @api_router.get("/deals/mine", response_model=List[Deal])
@@ -1023,6 +1108,22 @@ async def get_marques(user_data: dict = Depends(verify_token)):
     # Only load marque field, not all article data
     articles = await db.articles.find(
         {'marque': {'$exists': True, '$ne': None, '$ne': ''}},
+        {'_id': 0, 'marque': 1}
+    ).allow_disk_use(True).to_list(10000)
+    
+    marques = set()
+    for article in articles:
+        marque = article.get('marque')
+        if marque and marque.strip():
+            marques.add(marque.strip())
+    
+    return sorted(list(marques))
+
+@api_router.get("/marques-public")
+async def get_marques_public():
+    """Get unique marques from public articles - no auth required"""
+    articles = await db.articles.find(
+        {'public': True, 'marque': {'$exists': True, '$ne': None, '$ne': ''}},
         {'_id': 0, 'marque': 1}
     ).allow_disk_use(True).to_list(10000)
     
