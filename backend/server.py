@@ -999,7 +999,8 @@ async def update_todos(data: dict, user_data: dict = Depends(verify_token)):
 # Categories
 @api_router.get("/categories")
 async def get_categories():
-    articles = await db.articles.find({}, {'_id': 0, 'categorie': 1, 'sous_categorie': 1}).to_list(10000)
+    # Use projection to only load category fields, not all article data
+    articles = await db.articles.find({}, {'_id': 0, 'categorie': 1, 'sous_categorie': 1}).allow_disk_use(True).to_list(10000)
     
     categories = set()
     sous_categories = set()

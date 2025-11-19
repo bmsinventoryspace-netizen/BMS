@@ -193,13 +193,11 @@ const Inventaire = () => {
 
   const fetchMarques = async () => {
     try {
-      const response = await axios.get(`${API}/articles`);
-      const allMarques = response.data
-        .map(article => article.marque)
-        .filter(marque => marque && marque.trim())
-        .map(marque => marque.trim());
-      const uniqueMarques = [...new Set(allMarques)].sort();
-      setMarques(uniqueMarques);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/marques`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMarques(response.data || []);
     } catch (error) {
       console.error('Error fetching marques:', error);
     }
