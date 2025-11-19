@@ -1016,6 +1016,24 @@ async def get_categories():
         'sous_categories': sorted(list(sous_categories))
     }
 
+# Marques
+@api_router.get("/marques")
+async def get_marques(user_data: dict = Depends(verify_token)):
+    """Get unique marques from articles - optimized with projection"""
+    # Only load marque field, not all article data
+    articles = await db.articles.find(
+        {'marque': {'$exists': True, '$ne': None, '$ne': ''}},
+        {'_id': 0, 'marque': 1}
+    ).allow_disk_use(True).to_list(10000)
+    
+    marques = set()
+    for article in articles:
+        marque = article.get('marque')
+        if marque and marque.strip():
+            marques.add(marque.strip())
+    
+    return sorted(list(marques))
+
 # Stats tracking
 @api_router.post("/articles/{article_id}/view")
 async def track_article_view(article_id: int):
