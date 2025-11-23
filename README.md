@@ -139,8 +139,7 @@ Le frontend sera disponible sur `http://localhost:3000`
 
 ## 🔑 Compte par défaut
 
-- **Username** : `AdminLudo`
-- **Password** : `AdminLudo`
+
 
 ⚠️ **Changez le mot de passe après la première connexion !**
 
@@ -202,48 +201,6 @@ REACT_APP_BACKEND_URL=http://localhost:8000
 ```
 
 ---
-
-## 📊 API Endpoints
-
-### Authentification
-- `POST /api/auth/login` - Connexion
-- `GET /api/auth/me` - Utilisateur courant
-
-### Articles
-- `GET /api/articles` - Liste des articles (authentifié)
-- `GET /api/articles/public` - Articles publics
-- `POST /api/articles` - Créer un article
-- `PUT /api/articles/{id}` - Modifier un article
-- `DELETE /api/articles/{id}` - Supprimer un article
-- `POST /api/articles/export` - Export Excel
-
-### Liquides
-- `POST /api/articles/{id}/quantity` - Modifier quantité
-
-### Post-its
-- `GET /api/postits` - Liste des post-its
-- `POST /api/postits` - Créer un post-it
-- `POST /api/postits/{id}/check` - Marquer comme vu
-
-### Agenda
-- `GET /api/agenda` - Liste des événements
-- `POST /api/agenda` - Créer un événement
-- `DELETE /api/agenda/{id}` - Supprimer un événement
-
-### Statistiques
-- `GET /api/stats/articles` - Statistiques de consultation
-- `POST /api/articles/{id}/view` - Tracker une vue
-
-### Administration (Admin uniquement)
-- `GET /api/users` - Liste des utilisateurs
-- `POST /api/users` - Créer un utilisateur
-- `PUT /api/users/{username}` - Modifier un utilisateur
-- `DELETE /api/users/{username}` - Supprimer un utilisateur
-- `GET /api/pubs` - Liste des pubs
-- `POST /api/pubs` - Créer une pub
-- `DELETE /api/pubs/{id}` - Supprimer une pub
-- `GET /api/settings` - Paramètres
-- `PUT /api/settings` - Modifier les paramètres
 
 ---
 
