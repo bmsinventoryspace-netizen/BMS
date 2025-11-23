@@ -522,16 +522,48 @@ async def get_liquides(user_data: dict = Depends(verify_token)):
 async def get_articles(
     page: int = 1,
     limit: int = 30,
+    search: str = None,
+    category: str = None,
+    sous_category: str = None,
+    etat: str = None,
+    type: str = None,
     user_data: dict = Depends(verify_token)
 ):
-    """Get articles with pagination - only essential fields for list view"""
+    """Get articles with pagination and filters - only essential fields for list view"""
     skip = (page - 1) * limit
     
-    # Get total count
-    total = await db.articles.count_documents({})
+    # Build query filter
+    query = {}
+    
+    # Search in multiple fields
+    if search:
+        query['$or'] = [
+            {'nom': {'$regex': search, '$options': 'i'}},
+            {'ref': {'$regex': search, '$options': 'i'}},
+            {'sku': {'$regex': search, '$options': 'i'}},
+            {'id': {'$regex': search, '$options': 'i'}}
+        ]
+    
+    # Category filter
+    if category and category != 'all':
+        query['categorie'] = category
+    
+    # Sous-category filter
+    if sous_category and sous_category != 'all':
+        query['sous_categorie'] = {'$regex': sous_category, '$options': 'i'}
+    
+    # État filter
+    if etat and etat != 'all':
+        query['etat'] = etat
+    
+    # Type filter
+    if type and type != 'all':
+        query['type'] = type
+    
+    # Get total count with filters
+    total = await db.articles.count_documents(query)
     
     # Projection: only load essential fields for list display (NO PHOTOS to reduce payload)
-    # Use $slice to get array length indicator without loading photo data
     projection = {
         '_id': 0,
         'id': 1,
@@ -543,18 +575,18 @@ async def get_articles(
         'etat': 1,
         'type': 1,
         'public': 1,
-        'quantite': 1,  # IMPORTANT: needed for filtering
-        'litres': 1,     # IMPORTANT: needed for filtering
+        'quantite': 1,
+        'litres': 1,
         'prix_vente': 1,
         'marque': 1,
-        'photos': {'$slice': 0}  # Get empty array but preserve field to check existence
+        'photos': {'$slice': 0}
     }
     
-    # Get paginated articles (index on 'id' should handle sorting efficiently)
-    cursor = db.articles.find({}, projection).sort('id', -1).skip(skip).limit(limit)
+    # Get paginated and filtered articles
+    cursor = db.articles.find(query, projection).sort('id', -1).skip(skip).limit(limit)
     articles = await cursor.to_list(limit)
     
-    # Add has_photo flag - use single query to check all articles at once
+    # Add has_photo flag
     article_ids = [a['id'] for a in articles]
     photos_check = await db.articles.find(
         {'id': {'$in': article_ids}, 'photos.0': {'$exists': True}},
@@ -564,7 +596,7 @@ async def get_articles(
     
     for article in articles:
         article['has_photo'] = article['id'] in articles_with_photos
-        article['photos'] = []  # Empty array, will be loaded on demand
+        article['photos'] = []
     
     return {
         'articles': articles,

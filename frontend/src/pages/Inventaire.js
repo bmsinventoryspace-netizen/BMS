@@ -138,23 +138,38 @@ const Inventaire = () => {
   }
 
   useEffect(() => {
-    fetchArticles(currentPage);
     fetchCategories();
     fetchMarques();
-  }, [currentPage]);
+  }, []);
 
+  // Fetch articles when page or filters change
   useEffect(() => {
-    filterArticles();
-  }, [articles, searchTerm, selectedCategory, selectedSousCategory, selectedEtat, selectedType, selectedSousCategoryFilter]);
+    fetchArticles(currentPage);
+  }, [currentPage, searchTerm, selectedCategory, selectedSousCategory, selectedEtat, selectedType, selectedSousCategoryFilter]);
 
   const fetchArticles = async (page = 1) => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API}/articles?page=${page}&limit=30`, {
+      
+      // Build query params
+      const params = new URLSearchParams();
+      params.append('page', page);
+      params.append('limit', 30);
+      
+      if (searchTerm) params.append('search', searchTerm);
+      if (selectedCategory !== 'all') params.append('category', selectedCategory);
+      if (selectedSousCategory !== 'all') params.append('sous_category', selectedSousCategory);
+      if (selectedSousCategoryFilter !== 'all') params.append('sous_category', selectedSousCategoryFilter);
+      if (selectedEtat !== 'all') params.append('etat', selectedEtat);
+      if (selectedType !== 'all') params.append('type', selectedType);
+      
+      const response = await axios.get(`${API}/articles?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
       setArticles(response.data.articles || []);
+      setFilteredArticles(response.data.articles || []); // Set filtered = articles since filtering is done server-side
       setTotalPages(response.data.total_pages || 1);
       setTotalArticles(response.data.total || 0);
       setCurrentPage(response.data.page || 1);
@@ -203,47 +218,11 @@ const Inventaire = () => {
     }
   };
 
+  // Filtering is now done server-side in fetchArticles
+  // This function is no longer needed but kept for compatibility
   const filterArticles = () => {
-    let filtered = articles;
-
-    // Search term
-    if (searchTerm) {
-      filtered = filtered.filter(article =>
-        article.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.ref?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.id?.toString().includes(searchTerm)
-      );
-    }
-
-    // Category filter
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(article => article.categorie === selectedCategory);
-    }
-
-    // Sous-category filter
-    if (selectedSousCategory !== 'all') {
-      filtered = filtered.filter(article => article.sous_categorie === selectedSousCategory);
-    }
-
-    // État filter
-    if (selectedEtat !== 'all') {
-      filtered = filtered.filter(article => article.etat === selectedEtat);
-    }
-
-    // Type filter
-    if (selectedType !== 'all') {
-      filtered = filtered.filter(article => article.type === selectedType);
-    }
-
-    // Sous-category filter
-    if (selectedSousCategoryFilter !== 'all') {
-      filtered = filtered.filter(article => 
-        article.sous_categorie && article.sous_categorie.includes(selectedSousCategoryFilter)
-      );
-    }
-
-    setFilteredArticles(filtered);
+    // Server-side filtering is active, so filtered = articles
+    setFilteredArticles(articles);
   };
 
   const generateSKU = async () => {
