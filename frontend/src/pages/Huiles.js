@@ -73,7 +73,7 @@ const LiquideThumbnail = ({ liquideId, liquideNom }) => {
   }, [ref, liquideId, loading]);
 
   return (
-    <div ref={setRef} className="w-full h-full">
+    <div ref={setRef} className="w-full h-full overflow-hidden">
       {loading ? (
         <div className="w-full h-full bg-gradient-to-br from-blue-100 to-blue-200 animate-pulse flex items-center justify-center">
           <Droplet className="w-12 h-12 text-blue-400" />
