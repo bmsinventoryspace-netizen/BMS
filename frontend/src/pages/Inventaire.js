@@ -78,7 +78,7 @@ const ArticleThumbnail = ({ articleId, articleNom }) => {
   }, [ref, articleId, loading]);
 
   return (
-    <div ref={setRef} className="w-full h-full">
+    <div ref={setRef} className="w-full h-full overflow-hidden">
       {loading ? (
         <div className="w-full h-full bg-gray-200 animate-pulse" />
       ) : photo ? (
@@ -1146,7 +1146,7 @@ const Inventaire = () => {
               className="glass rounded-2xl overflow-hidden shadow-md hover-lift"
               data-testid={`article-card-${article.id}`}
             >
-              <div className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200">
+              <div className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
                 {article.has_photo ? (
                   <ArticleThumbnail articleId={article.id} articleNom={article.nom} />
                 ) : (

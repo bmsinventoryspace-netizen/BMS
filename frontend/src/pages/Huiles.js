@@ -298,7 +298,7 @@ const Huiles = () => {
                   className="glass rounded-2xl overflow-hidden shadow-md hover-lift"
                   data-testid={`liquide-card-${liquide.id}`}
                 >
-                <div className="relative aspect-video bg-gradient-to-br from-blue-100 to-blue-200">
+                <div className="relative aspect-video bg-gradient-to-br from-blue-100 to-blue-200 overflow-hidden">
                   {liquide.has_photo ? (
                     <LiquideThumbnail liquideId={liquide.id} liquideNom={liquide.nom} />
                   ) : (

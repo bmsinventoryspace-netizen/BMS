@@ -19,6 +19,7 @@ const CataloguePublic = () => {
   const [articles, setArticles] = useState([]);
   const [pubs, setPubs] = useState([]);
   const [filteredArticles, setFilteredArticles] = useState([]);
+  const [filteredPubs, setFilteredPubs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMarque, setSelectedMarque] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -49,7 +50,8 @@ const CataloguePublic = () => {
 
   useEffect(() => {
     filterArticles();
-  }, [articles, searchTerm, selectedMarque, selectedCategory, selectedSousCategorie, selectedEtat]);
+    filterPubs();
+  }, [articles, pubs, searchTerm, selectedMarque, selectedCategory, selectedSousCategorie, selectedEtat]);
 
   const fetchArticles = async () => {
     try {
@@ -108,7 +110,10 @@ const CataloguePublic = () => {
     if (searchTerm) {
       filtered = filtered.filter(article =>
         article.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.ref?.toLowerCase().includes(searchTerm.toLowerCase())
+        article.ref?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        article.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        article.marque?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        article.categorie?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -136,6 +141,23 @@ const CataloguePublic = () => {
     }
 
     setFilteredArticles(filtered);
+  };
+
+  const filterPubs = () => {
+    let filtered = pubs;
+
+    // Filtrer les pubs selon le terme de recherche
+    if (searchTerm) {
+      filtered = filtered.filter(pub =>
+        pub.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        pub.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Les filtres de marque, catégorie, etc. ne s'appliquent pas aux pubs
+    // mais on garde la fonction pour une éventuelle extension future
+
+    setFilteredPubs(filtered);
   };
 
   const calculateDiscount = (prix_vente, prix_neuf) => {
@@ -227,13 +249,13 @@ const CataloguePublic = () => {
   const insertPubsInCatalogue = () => {
     const result = [];
     
-    // Ajouter tous les articles
+    // Ajouter tous les articles filtrés
     filteredArticles.forEach((article) => {
       result.push({ type: 'article', data: article });
     });
     
-    // Ajouter toutes les pubs et offres
-    pubs.forEach((pub) => {
+    // Ajouter toutes les pubs et offres filtrées
+    filteredPubs.forEach((pub) => {
       result.push({ type: pub.type, data: pub });
     });
 
@@ -400,7 +422,7 @@ const CataloguePublic = () => {
                   }}
                   data-testid={`article-${article.id}`}
                 >
-                  <div className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200">
+                  <div className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
                     {article.photos && article.photos.length > 0 ? (
                       <LazyLoadImage
                         src={article.photos[0]}

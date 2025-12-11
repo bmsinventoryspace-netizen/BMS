@@ -97,7 +97,7 @@ const DealFire = () => {
             const pct = discountOf(d.prix, d.prix_ref);
             return (
               <div key={d.id} className="glass rounded-2xl overflow-hidden shadow-md">
-                <div className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200">
+                <div className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
                   {d.image ? (
                     <img src={d.image} alt={d.nom} className="w-full h-full object-cover" loading="lazy" />
                   ) : (

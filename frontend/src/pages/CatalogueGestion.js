@@ -227,7 +227,7 @@ const CatalogueGestion = () => {
               data-testid={`article-card-${article.id}`}
             >
               <div 
-                className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200 cursor-pointer"
+                className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200 cursor-pointer overflow-hidden"
                 onClick={() => setSelectedArticle(article)}
               >
                 {article.photos && article.photos.length > 0 ? (
