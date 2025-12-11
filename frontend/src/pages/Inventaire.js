@@ -122,6 +122,7 @@ const Inventaire = () => {
   const [marques, setMarques] = useState([]);
   const [formData, setFormData] = useState(getEmptyFormData());
   const [photos, setPhotos] = useState([]);
+  const [photosModified, setPhotosModified] = useState(false); // Track if photos were modified
   const [newSousCategorie, setNewSousCategorie] = useState('');
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -259,6 +260,7 @@ const Inventaire = () => {
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
+    setPhotosModified(true); // Mark photos as modified
     files.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -279,7 +281,6 @@ const Inventaire = () => {
     try {
       const dataToSend = {
         ...formData,
-        photos: photos,
         // Convertir le tableau de sous-catégories en string pour le backend
         sous_categorie: formData.sous_categories.length > 0 ? formData.sous_categories.join(', ') : null,
         prix_neuf: formData.prix_neuf ? parseFloat(formData.prix_neuf) : null,
@@ -293,6 +294,22 @@ const Inventaire = () => {
       // Supprimer sous_categories du dataToSend car on a déjà sous_categorie
       delete dataToSend.sous_categories;
 
+      // IMPORTANT: Ne pas envoyer photos si on modifie un article existant et qu'on n'a pas modifié les photos
+      // Si on crée un nouvel article, on envoie les photos (même si vide)
+      // Si on modifie, on envoie photos SEULEMENT si l'utilisateur a modifié les photos (photosModified = true)
+      if (selectedArticle) {
+        // Modification : ne pas envoyer photos si elles n'ont pas été modifiées (garder les existantes)
+        // On envoie photos seulement si l'utilisateur a ajouté/supprimé des photos
+        if (photosModified) {
+          dataToSend.photos = photos || [];
+        }
+        // Si photosModified = false, on ne l'inclut pas du tout dans la requête
+        // Le backend préservera les photos existantes
+      } else {
+        // Création : toujours envoyer photos (même si vide)
+        dataToSend.photos = photos || [];
+      }
+
       if (selectedArticle) {
         await axios.put(`${API}/articles/${selectedArticle.id}`, dataToSend);
         toast.success('Article modifié');
@@ -305,6 +322,7 @@ const Inventaire = () => {
       setSelectedArticle(null);
       setFormData(getEmptyFormData());
       setPhotos([]);
+      setPhotosModified(false); // Reset flag
       fetchArticles(currentPage);
       fetchCategories();
     } catch (error) {
@@ -348,6 +366,7 @@ const Inventaire = () => {
       }
       setFormData({ ...fullArticle, sous_categories: sousCategories });
       setPhotos(fullArticle.photos || []);
+      setPhotosModified(false); // Reset flag - photos not modified yet
       setArticleType(fullArticle.type);
       setShowAddDialog(true);
     } catch (error) {
@@ -456,6 +475,7 @@ const Inventaire = () => {
     setSelectedArticle(null);
     setFormData(getEmptyFormData());
     setPhotos([]);
+    setPhotosModified(false); // Reset flag for new article
     setArticleType('piece');
     setRemisePercentage('');
     setShowNewCategoryInput(false);
@@ -541,7 +561,10 @@ const Inventaire = () => {
                             <img src={photo} alt="Preview" className="w-full h-20 object-cover rounded" />
                             <button
                               type="button"
-                              onClick={() => setPhotos(photos.filter((_, i) => i !== idx))}
+                              onClick={() => {
+                                setPhotos(photos.filter((_, i) => i !== idx));
+                                setPhotosModified(true); // Mark as modified when deleting
+                              }}
                               className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
                             >
                               ×

@@ -700,16 +700,25 @@ async def update_article(article_id: int, article: ArticleCreate, user_data: dic
     if not existing:
         raise HTTPException(status_code=404, detail='Article not found')
     
-    article_data = article.model_dump()
+    # Use exclude_unset=True to only include fields that were explicitly provided
+    article_data = article.model_dump(exclude_unset=True)
     
-    # Preserve existing photos if no new photos provided
-    if article.photos and len(article.photos) > 0:
-        # Compress new photos
-        compressed_photos = [compress_image(photo) for photo in article.photos]
-        article_data['photos'] = compressed_photos
-    else:
-        # Keep existing photos if no new ones provided
-        article_data['photos'] = existing.get('photos', [])
+    # Handle photos: only update if explicitly provided AND non-empty
+    # If photos is not in article_data, it means it wasn't sent, so preserve existing
+    if 'photos' in article_data:
+        if article_data['photos'] and len(article_data['photos']) > 0:
+            # Compress new photos
+            compressed_photos = [compress_image(photo) for photo in article_data['photos']]
+            article_data['photos'] = compressed_photos
+        else:
+            # Empty array was sent - this means user wants to remove photos
+            # But we'll preserve existing photos unless explicitly empty
+            # Actually, if empty array is sent, we should keep existing photos
+            # So we remove photos from update to preserve existing
+            article_data.pop('photos', None)
+    
+    # If photos was not in the update, MongoDB won't touch the existing photos field
+    # This is what we want - preserve existing photos
     
     # Preserve metadata that shouldn't change
     article_data['posted_by'] = existing.get('posted_by')
