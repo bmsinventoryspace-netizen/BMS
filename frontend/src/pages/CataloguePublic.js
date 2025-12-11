@@ -379,7 +379,7 @@ const CataloguePublic = () => {
                     onClick={() => setSelectedPub(item.data)}
                     data-testid={`${item.type}-${index}`}
                   >
-                    <div className={`relative aspect-square bg-gradient-to-br ${theme.bg100} ${theme.bg200}`}>
+                    <div className={`relative aspect-square bg-gradient-to-br ${theme.bg100} ${theme.bg200} overflow-hidden`}>
                       {item.data.image ? (
                         <LazyLoadImage
                           src={item.data.image}
