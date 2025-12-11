@@ -127,8 +127,14 @@ const CatalogueGestion = () => {
   const togglePublic = async (article) => {
     try {
       const token = localStorage.getItem('token');
+      
+      // Load full article details including photos to preserve them
+      const fullArticle = await axios.get(`${API}/articles/${article.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
       await axios.put(`${API}/articles/${article.id}`, {
-        ...article,
+        ...fullArticle.data,
         public: !article.public
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -136,7 +142,8 @@ const CatalogueGestion = () => {
       toast.success(article.public ? 'Retiré du catalogue' : 'Ajouté au catalogue');
       fetchArticles();
     } catch (error) {
-      toast.error('Erreur');
+      console.error('Error toggling public:', error);
+      toast.error('Erreur de mise à jour');
     }
   };
 

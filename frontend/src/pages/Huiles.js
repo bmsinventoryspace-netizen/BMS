@@ -21,6 +21,28 @@ const LiquideThumbnail = ({ liquideId, liquideNom }) => {
   useEffect(() => {
     if (!ref) return;
 
+    // Check if IntersectionObserver is supported
+    if (typeof IntersectionObserver === 'undefined') {
+      // Fallback: load photo immediately on older browsers
+      const loadPhoto = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`${API}/articles/${liquideId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (response.data.photos && response.data.photos.length > 0) {
+            setPhoto(response.data.photos[0]);
+          }
+        } catch (error) {
+          console.error('Error loading liquide photo:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadPhoto();
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && loading) {
@@ -34,7 +56,7 @@ const LiquideThumbnail = ({ liquideId, liquideNom }) => {
                 setPhoto(response.data.photos[0]);
               }
             } catch (error) {
-              console.error('Error loading photo:', error);
+              console.error('Error loading liquide photo:', error);
             } finally {
               setLoading(false);
             }

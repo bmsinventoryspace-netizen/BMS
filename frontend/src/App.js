@@ -50,13 +50,38 @@ function App() {
     if (user) {
       try {
         const wsProtocol = BACKEND_URL.startsWith('https') ? 'wss' : 'ws';
-        const ws = new WebSocket(`${wsProtocol}://${BACKEND_URL.replace(/^https?:\/\//, '')}/api/ws`);
+        const wsUrl = `${wsProtocol}://${BACKEND_URL.replace(/^https?:\/\//, '')}/api/ws`;
+        
+        // Check if WebSocket is supported
+        if (typeof WebSocket === 'undefined') {
+          console.warn('WebSocket not supported in this browser');
+          return;
+        }
+        
+        const ws = new WebSocket(wsUrl);
+        
+        ws.onerror = (error) => {
+          console.warn('WebSocket connection error:', error);
+          // Don't show error to user, just log it
+        };
+        
+        ws.onopen = () => {
+          console.log('WebSocket connected');
+        };
+        
         setSocket(ws);
         return () => {
-          try { ws.close(); } catch {}
+          try {
+            if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+              ws.close();
+            }
+          } catch (e) {
+            console.warn('Error closing WebSocket:', e);
+          }
         };
-      } catch {
-        // ignore
+      } catch (error) {
+        console.warn('Failed to create WebSocket:', error);
+        // Continue without WebSocket - app will still work
       }
     }
   }, [user]);

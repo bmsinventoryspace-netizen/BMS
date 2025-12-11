@@ -26,6 +26,28 @@ const ArticleThumbnail = ({ articleId, articleNom }) => {
   useEffect(() => {
     if (!ref) return;
 
+    // Check if IntersectionObserver is supported
+    if (typeof IntersectionObserver === 'undefined') {
+      // Fallback: load photo immediately on older browsers
+      const loadPhoto = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`${API}/articles/${articleId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (response.data.photos && response.data.photos.length > 0) {
+            setPhoto(response.data.photos[0]);
+          }
+        } catch (error) {
+          console.error('Error loading photo:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadPhoto();
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && loading) {
@@ -302,22 +324,38 @@ const Inventaire = () => {
     }
   };
 
-  const handleEdit = (article) => {
-    setSelectedArticle(article);
-    // Convertir sous_categorie string en array si nécessaire
-    let sousCategories = [];
-    if (article.sous_categorie) {
-      if (Array.isArray(article.sous_categorie)) {
-        sousCategories = article.sous_categorie;
-      } else if (typeof article.sous_categorie === 'string') {
-        // Séparer par virgule si c'est une string
-        sousCategories = article.sous_categorie.split(', ').map(s => s.trim()).filter(s => s);
+  const handleEdit = async (article) => {
+    try {
+      setLoading(true);
+      // Load full article details including photos
+      const token = localStorage.getItem('token');
+      const fullArticleResponse = await axios.get(`${API}/articles/${article.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const fullArticle = fullArticleResponse.data;
+      
+      setSelectedArticle(fullArticle);
+      
+      // Convertir sous_categorie string en array si nécessaire
+      let sousCategories = [];
+      if (fullArticle.sous_categorie) {
+        if (Array.isArray(fullArticle.sous_categorie)) {
+          sousCategories = fullArticle.sous_categorie;
+        } else if (typeof fullArticle.sous_categorie === 'string') {
+          // Séparer par virgule si c'est une string
+          sousCategories = fullArticle.sous_categorie.split(', ').map(s => s.trim()).filter(s => s);
+        }
       }
+      setFormData({ ...fullArticle, sous_categories: sousCategories });
+      setPhotos(fullArticle.photos || []);
+      setArticleType(fullArticle.type);
+      setShowAddDialog(true);
+    } catch (error) {
+      console.error('Error loading article details:', error);
+      toast.error('Erreur de chargement');
+    } finally {
+      setLoading(false);
     }
-    setFormData({ ...article, sous_categories: sousCategories });
-    setPhotos(article.photos || []);
-    setArticleType(article.type);
-    setShowAddDialog(true);
   };
 
   const addSousCategorie = () => {

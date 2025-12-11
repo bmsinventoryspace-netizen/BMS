@@ -700,13 +700,20 @@ async def update_article(article_id: int, article: ArticleCreate, user_data: dic
     if not existing:
         raise HTTPException(status_code=404, detail='Article not found')
     
-    # Compress new photos
-    compressed_photos = [compress_image(photo) for photo in article.photos]
-    
     article_data = article.model_dump()
-    article_data['photos'] = compressed_photos
-    article_data['posted_by'] = existing['posted_by']
-    article_data['date_post'] = existing['date_post']
+    
+    # Preserve existing photos if no new photos provided
+    if article.photos and len(article.photos) > 0:
+        # Compress new photos
+        compressed_photos = [compress_image(photo) for photo in article.photos]
+        article_data['photos'] = compressed_photos
+    else:
+        # Keep existing photos if no new ones provided
+        article_data['photos'] = existing.get('photos', [])
+    
+    # Preserve metadata that shouldn't change
+    article_data['posted_by'] = existing.get('posted_by')
+    article_data['date_post'] = existing.get('date_post')
     
     await db.articles.update_one({'id': article_id}, {'$set': article_data})
     
