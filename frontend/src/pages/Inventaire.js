@@ -413,23 +413,48 @@ const Inventaire = () => {
     }
   };
 
+  const triggerDownload = (blob, filename) => {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => window.URL.revokeObjectURL(url), 100);
+  };
+
   const handleExport = async () => {
     try {
+      const token = localStorage.getItem('token');
       const response = await axios.post(`${API}/articles/export`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
-      
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'inventaire_bms.xlsx');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      
-      toast.success('Export réussi');
+      const contentDisposition = response.headers['content-disposition'] || '';
+      const match = contentDisposition.match(/filename="?([^"]+)"?/);
+      const filename = match ? match[1] : 'inventaire_bms.xlsx';
+      triggerDownload(new Blob([response.data]), filename);
+      toast.success('Export Excel réussi');
     } catch (error) {
-      toast.error('Erreur d\'export');
+      toast.error('Erreur lors de l\'export');
+    }
+  };
+
+  const handleExportSansImages = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/articles/export-json?sans_images=true`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      const contentDisposition = response.headers['content-disposition'] || '';
+      const match = contentDisposition.match(/filename\*=UTF-8''(.+)|filename="?([^"]+)"?/);
+      const filename = match ? decodeURIComponent(match[1] || match[2]) : 'inventaire_sans_images.json';
+      triggerDownload(new Blob([response.data], { type: 'application/json' }), filename);
+      toast.success('Export JSON (sans images) réussi');
+    } catch (error) {
+      toast.error('Erreur lors de l\'export JSON');
     }
   };
 
@@ -501,7 +526,7 @@ const Inventaire = () => {
       <div className="space-y-6" data-testid="inventaire-page">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">Inventaire</h1>
-          <div className="flex space-x-3">
+          <div className="flex flex-wrap gap-2">
             <Button
               onClick={handleExport}
               variant="outline"
@@ -509,7 +534,16 @@ const Inventaire = () => {
               data-testid="export-button"
             >
               <Download className="w-4 h-4 mr-2" />
-              Exporter
+              Exporter (.xlsx)
+            </Button>
+            <Button
+              onClick={handleExportSansImages}
+              variant="outline"
+              className="border-gray-400 text-gray-600 hover:bg-gray-50 hover:opacity-80"
+              data-testid="export-sans-images-button"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Exporter (sans images)
             </Button>
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
               <DialogTrigger asChild>

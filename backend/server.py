@@ -747,20 +747,19 @@ async def get_new_sku(user_data: dict = Depends(verify_token)):
 
 @api_router.post("/articles/export")
 async def export_articles(user_data: dict = Depends(verify_token)):
-    articles = await db.articles.find({}, {'_id': 0}).to_list(10000)
-    
+    """Export complet de l'inventaire en Excel (tous les articles, sans limite)"""
+    articles = await db.articles.find({}, {'_id': 0}).to_list(None)
+
     wb = Workbook()
     ws = wb.active
     ws.title = "Inventaire"
-    
-    # Headers
-    headers = ['ID', 'Type', 'Nom', 'Référence', 'SKU', 'Description', 'État', 'Catégorie', 
-               'Sous-catégorie', 'Lieu', 'Date obtention', 'Posté par', 'Date post', 
+
+    headers = ['ID', 'Type', 'Nom', 'Référence', 'SKU', 'Description', 'État', 'Catégorie',
+               'Sous-catégorie', 'Lieu', 'Date obtention', 'Posté par', 'Date post',
                'Prix neuf', 'Prix achat', 'Prix vente', 'Quantité', 'Public',
                'Marque', 'Litres', 'Quantité min', 'Usage hebdo', 'Viscosité', 'Norme', 'Usage']
     ws.append(headers)
-    
-    # Data
+
     for article in articles:
         row = [
             article.get('id'),
@@ -790,18 +789,48 @@ async def export_articles(user_data: dict = Depends(verify_token)):
             article.get('usage')
         ]
         ws.append(row)
-    
-    # Save to BytesIO
+
     buffer = BytesIO()
     wb.save(buffer)
     buffer.seek(0)
-    
-    # Save temporarily
-    temp_path = f'/tmp/inventaire_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
-    with open(temp_path, 'wb') as f:
-        f.write(buffer.getvalue())
-    
-    return FileResponse(temp_path, filename='inventaire_bms.xlsx', media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+    filename = f"inventaire_bms_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    return StreamingResponse(
+        buffer,
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+    )
+
+
+@api_router.get("/articles/export-json")
+async def export_articles_json(
+    sans_images: bool = False,
+    user_data: dict = Depends(verify_token)
+):
+    """Export JSON de l'inventaire complet.
+    - sans_images=false (défaut) : inclut les photos (base64)
+    - sans_images=true : supprime tous les champs d'images
+    """
+    IMAGE_FIELDS = {'photos', 'photo', 'image', 'imageUrl', 'imageUrls', 'images',
+                    'thumbnail', 'thumbnails', 'photo_url', 'photo_urls'}
+
+    articles = await db.articles.find({}, {'_id': 0}).to_list(None)
+
+    if sans_images:
+        articles = [
+            {k: v for k, v in article.items() if k not in IMAGE_FIELDS}
+            for article in articles
+        ]
+        filename = f"inventaire_sans_images_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    else:
+        filename = f"inventaire_complet_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+
+    json_str = json.dumps(articles, indent=2, ensure_ascii=False, default=str)
+    return Response(
+        content=json_str.encode('utf-8'),
+        media_type='application/json; charset=utf-8',
+        headers={'Content-Disposition': f"attachment; filename*=UTF-8''{filename}"}
+    )
 
 # Update liquid quantity
 @api_router.post("/articles/{article_id}/quantity")
