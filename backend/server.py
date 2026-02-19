@@ -745,17 +745,108 @@ async def get_new_sku(user_data: dict = Depends(verify_token)):
         sku = generate_sku()
     return {'sku': sku}
 
+
+def build_active_articles_query():
+    """Articles actifs: on exclut uniquement les vrais supprimés."""
+    return {
+        '$and': [
+            {
+                '$or': [
+                    {'isDeleted': {'$exists': False}},
+                    {'isDeleted': False},
+                    {'isDeleted': None},
+                    {'isDeleted': 0}
+                ]
+            },
+            {
+                '$or': [
+                    {'deletedAt': {'$exists': False}},
+                    {'deletedAt': None},
+                    {'deletedAt': ''},
+                    {'deletedAt': False}
+                ]
+            },
+            {
+                '$or': [
+                    {'status': {'$exists': False}},
+                    {'status': {'$nin': ['deleted', 'Deleted', 'DELETED']}},
+                    {'status': None},
+                    {'status': ''}
+                ]
+            }
+        ]
+    }
+
+
+@api_router.post("/articles/export-excel-complet")
+async def export_articles_excel_complet(user_data: dict = Depends(verify_token)):
+    """Nouvel export Excel complet dédié, colonnes fixes métier."""
+    cursor = db.articles.find(build_active_articles_query(), {'_id': 0}).sort('id', -1)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Inventaire complet"
+
+    headers = [
+        'ID', 'Type', 'Nom', 'Référence', 'SKU', 'Description', 'État',
+        'Catégorie', 'Sous-catégorie', 'Lieu', 'Date obtention', 'Posté par',
+        'Date post', 'Prix neuf', 'Prix achat', 'Prix vente', 'Quantité',
+        'Public', 'Marque', 'Litres', 'Quantité min', 'Usage hebdo',
+        'Viscosité', 'Norme', 'Usage'
+    ]
+    ws.append(headers)
+
+    export_count = 0
+    async for article in cursor:
+        ws.append([
+            article.get('id'),
+            article.get('type'),
+            article.get('nom'),
+            article.get('ref'),
+            article.get('sku'),
+            article.get('description'),
+            article.get('etat'),
+            article.get('categorie'),
+            article.get('sous_categorie'),
+            article.get('lieu'),
+            article.get('date_obtention'),
+            article.get('posted_by'),
+            article.get('date_post'),
+            article.get('prix_neuf'),
+            article.get('prix_achat'),
+            article.get('prix_vente'),
+            article.get('quantite'),
+            'Oui' if article.get('public') else 'Non',
+            article.get('marque'),
+            article.get('litres'),
+            article.get('quantite_min'),
+            article.get('usage_hebdo'),
+            article.get('viscosite'),
+            article.get('norme'),
+            article.get('usage')
+        ])
+        export_count += 1
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    filename = f"inventaire_complet_champs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    logger.info(f"[EXPORT XLSX COMPLET] {export_count} articles exportés")
+    return StreamingResponse(
+        buffer,
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={
+            'Content-Disposition': f'attachment; filename="{filename}"',
+            'Cache-Control': 'no-store'
+        }
+    )
+
+
 @api_router.post("/articles/export")
 async def export_articles(user_data: dict = Depends(verify_token)):
     """Export complet de l'inventaire en Excel (tous les articles, sans limite)"""
-    active_query = {
-        '$and': [
-            {'$or': [{'isDeleted': {'$exists': False}}, {'isDeleted': {'$ne': True}}]},
-            {'$or': [{'deletedAt': {'$exists': False}}, {'deletedAt': None}]},
-            {'$or': [{'status': {'$exists': False}}, {'status': {'$ne': 'deleted'}}]}
-        ]
-    }
-    cursor = db.articles.find(active_query, {'_id': 0}).sort('id', -1)
+    cursor = db.articles.find(build_active_articles_query(), {'_id': 0}).sort('id', -1)
 
     wb = Workbook()
     ws = wb.active
@@ -828,14 +919,7 @@ async def export_articles_json(
     IMAGE_FIELDS = {'photos', 'photo', 'image', 'imageUrl', 'imageUrls', 'images',
                     'thumbnail', 'thumbnails', 'photo_url', 'photo_urls'}
 
-    active_query = {
-        '$and': [
-            {'$or': [{'isDeleted': {'$exists': False}}, {'isDeleted': {'$ne': True}}]},
-            {'$or': [{'deletedAt': {'$exists': False}}, {'deletedAt': None}]},
-            {'$or': [{'status': {'$exists': False}}, {'status': {'$ne': 'deleted'}}]}
-        ]
-    }
-    cursor = db.articles.find(active_query, {'_id': 0}).sort('id', -1)
+    cursor = db.articles.find(build_active_articles_query(), {'_id': 0}).sort('id', -1)
     articles = []
     async for article in cursor:
         articles.append(article)

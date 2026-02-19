@@ -442,6 +442,23 @@ const Inventaire = () => {
     }
   };
 
+  const handleExportExcelComplet = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API}/articles/export-excel-complet`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      const contentDisposition = response.headers['content-disposition'] || '';
+      const match = contentDisposition.match(/filename="?([^"]+)"?/);
+      const filename = match ? match[1] : 'inventaire_complet_champs.xlsx';
+      triggerDownload(new Blob([response.data]), filename);
+      toast.success('Export Excel complet téléchargé');
+    } catch (error) {
+      toast.error('Erreur export Excel complet');
+    }
+  };
+
   const openReferenceSearch = () => {
     if (formData.nom) {
       const url = `https://www.google.com/search?q=${encodeURIComponent(formData.nom + ' fiche technique')}`;
@@ -518,6 +535,15 @@ const Inventaire = () => {
             >
               <Download className="w-4 h-4 mr-2" />
               Exporter
+            </Button>
+            <Button
+              onClick={handleExportExcelComplet}
+              variant="outline"
+              className={`${theme.border500} ${theme.textLight} ${theme.bgLight} hover:opacity-80`}
+              data-testid="export-complet-button"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Exporter Excel complet
             </Button>
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
               <DialogTrigger asChild>
