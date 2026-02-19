@@ -748,7 +748,8 @@ async def get_new_sku(user_data: dict = Depends(verify_token)):
 @api_router.post("/articles/export")
 async def export_articles(user_data: dict = Depends(verify_token)):
     """Export complet de l'inventaire en Excel (tous les articles, sans limite)"""
-    articles = await db.articles.find({}, {'_id': 0}).to_list(None)
+    articles = await db.articles.find({}, {'_id': 0}).to_list(100000)
+    logger.info(f"[EXPORT XLSX] {len(articles)} articles récupérés depuis MongoDB")
 
     wb = Workbook()
     ws = wb.active
@@ -814,7 +815,8 @@ async def export_articles_json(
     IMAGE_FIELDS = {'photos', 'photo', 'image', 'imageUrl', 'imageUrls', 'images',
                     'thumbnail', 'thumbnails', 'photo_url', 'photo_urls'}
 
-    articles = await db.articles.find({}, {'_id': 0}).to_list(None)
+    articles = await db.articles.find({}, {'_id': 0}).to_list(100000)
+    logger.info(f"[EXPORT JSON] {len(articles)} articles récupérés, sans_images={sans_images}")
 
     if sans_images:
         articles = [

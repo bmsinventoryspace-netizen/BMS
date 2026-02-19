@@ -13,6 +13,7 @@ const API = `${BACKEND_URL}/api`;
 const AdminBackup = () => {
   const [backupInfo, setBackupInfo] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadingExportJson, setLoadingExportJson] = useState(false);
   const [loadingInfo, setLoadingInfo] = useState(true);
   const { theme } = useTheme();
 
@@ -37,6 +38,44 @@ const AdminBackup = () => {
       }
     } finally {
       setLoadingInfo(false);
+    }
+  };
+
+  const handleExportInventaireSansImages = async () => {
+    setLoadingExportJson(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/articles/export-json?sans_images=true`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([response.data], { type: 'application/json;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+
+      const contentDisposition = response.headers['content-disposition'] || '';
+      const match = contentDisposition.match(/filename\*=UTF-8''(.+)|filename="?([^"]+)"?/);
+      const filename = match
+        ? decodeURIComponent(match[1] || match[2])
+        : `inventaire_sans_images_${new Date().toISOString().split('T')[0].replace(/-/g, '')}.json`;
+
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => { link.remove(); window.URL.revokeObjectURL(url); }, 100);
+
+      toast.success('Export inventaire (sans images) téléchargé !');
+    } catch (error) {
+      console.error('Error exporting inventory JSON:', error);
+      let errorMessage = "Erreur lors de l'export de l'inventaire";
+      if (error.response?.status === 401) errorMessage = 'Session expirée, reconnectez-vous.';
+      else if (error.response?.status === 403) errorMessage = 'Accès refusé.';
+      else if (error.response?.data?.detail) errorMessage = error.response.data.detail;
+      toast.error(errorMessage);
+    } finally {
+      setLoadingExportJson(false);
     }
   };
 
@@ -248,6 +287,47 @@ const AdminBackup = () => {
                   Taille estimée : {backupInfo.estimated_size_mb} MB
                 </p>
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Export inventaire sans images */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="w-5 h-5" />
+              Export inventaire (sans images)
+            </CardTitle>
+            <CardDescription>
+              Téléchargez uniquement la liste des articles sans les photos — fichier léger, idéal pour partager ou analyser
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 self-start">
+                <li>Tous les articles (nom, référence, prix, catégorie, état, etc.)</li>
+                <li>Aucune photo ni donnée d'image incluse</li>
+                <li>Format JSON — facile à ouvrir dans Excel ou tout éditeur</li>
+              </ul>
+              <Button
+                onClick={handleExportInventaireSansImages}
+                disabled={loadingExportJson}
+                variant="outline"
+                className="border-gray-400 text-gray-700 hover:bg-gray-50 px-8 py-6 text-lg"
+                size="lg"
+              >
+                {loadingExportJson ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-700 mr-2"></div>
+                    Export en cours...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-5 h-5 mr-2" />
+                    Exporter l'inventaire (sans images)
+                  </>
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>
