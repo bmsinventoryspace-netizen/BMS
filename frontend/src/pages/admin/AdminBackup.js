@@ -72,6 +72,7 @@ const AdminBackup = () => {
       let errorMessage = "Erreur lors de l'export de l'inventaire";
       if (error.response?.status === 401) errorMessage = 'Session expirée, reconnectez-vous.';
       else if (error.response?.status === 403) errorMessage = 'Accès refusé.';
+      else if (error.response?.status === 404) errorMessage = "Endpoint export introuvable: redéployez le backend.";
       else if (error.response?.data?.detail) errorMessage = error.response.data.detail;
       toast.error(errorMessage);
     } finally {

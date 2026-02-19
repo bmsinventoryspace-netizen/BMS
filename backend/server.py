@@ -748,8 +748,14 @@ async def get_new_sku(user_data: dict = Depends(verify_token)):
 @api_router.post("/articles/export")
 async def export_articles(user_data: dict = Depends(verify_token)):
     """Export complet de l'inventaire en Excel (tous les articles, sans limite)"""
-    articles = await db.articles.find({}, {'_id': 0}).to_list(100000)
-    logger.info(f"[EXPORT XLSX] {len(articles)} articles récupérés depuis MongoDB")
+    active_query = {
+        '$and': [
+            {'$or': [{'isDeleted': {'$exists': False}}, {'isDeleted': {'$ne': True}}]},
+            {'$or': [{'deletedAt': {'$exists': False}}, {'deletedAt': None}]},
+            {'$or': [{'status': {'$exists': False}}, {'status': {'$ne': 'deleted'}}]}
+        ]
+    }
+    cursor = db.articles.find(active_query, {'_id': 0}).sort('id', -1)
 
     wb = Workbook()
     ws = wb.active
@@ -761,7 +767,8 @@ async def export_articles(user_data: dict = Depends(verify_token)):
                'Marque', 'Litres', 'Quantité min', 'Usage hebdo', 'Viscosité', 'Norme', 'Usage']
     ws.append(headers)
 
-    for article in articles:
+    export_count = 0
+    async for article in cursor:
         row = [
             article.get('id'),
             article.get('type'),
@@ -790,16 +797,22 @@ async def export_articles(user_data: dict = Depends(verify_token)):
             article.get('usage')
         ]
         ws.append(row)
+        export_count += 1
 
     buffer = BytesIO()
     wb.save(buffer)
     buffer.seek(0)
 
     filename = f"inventaire_bms_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    logger.info(f"[EXPORT XLSX] {export_count} articles exportés")
     return StreamingResponse(
         buffer,
         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+        headers={
+            'Content-Disposition': f'attachment; filename="{filename}"',
+            'Cache-Control': 'no-store',
+            'X-Export-Count': str(export_count)
+        }
     )
 
 
@@ -815,8 +828,18 @@ async def export_articles_json(
     IMAGE_FIELDS = {'photos', 'photo', 'image', 'imageUrl', 'imageUrls', 'images',
                     'thumbnail', 'thumbnails', 'photo_url', 'photo_urls'}
 
-    articles = await db.articles.find({}, {'_id': 0}).to_list(100000)
-    logger.info(f"[EXPORT JSON] {len(articles)} articles récupérés, sans_images={sans_images}")
+    active_query = {
+        '$and': [
+            {'$or': [{'isDeleted': {'$exists': False}}, {'isDeleted': {'$ne': True}}]},
+            {'$or': [{'deletedAt': {'$exists': False}}, {'deletedAt': None}]},
+            {'$or': [{'status': {'$exists': False}}, {'status': {'$ne': 'deleted'}}]}
+        ]
+    }
+    cursor = db.articles.find(active_query, {'_id': 0}).sort('id', -1)
+    articles = []
+    async for article in cursor:
+        articles.append(article)
+    logger.info(f"[EXPORT JSON] {len(articles)} articles actifs récupérés, sans_images={sans_images}")
 
     if sans_images:
         articles = [
@@ -831,7 +854,11 @@ async def export_articles_json(
     return Response(
         content=json_str.encode('utf-8'),
         media_type='application/json; charset=utf-8',
-        headers={'Content-Disposition': f"attachment; filename*=UTF-8''{filename}"}
+        headers={
+            'Content-Disposition': f"attachment; filename*=UTF-8''{filename}",
+            'Cache-Control': 'no-store',
+            'X-Export-Count': str(len(articles))
+        }
     )
 
 # Update liquid quantity

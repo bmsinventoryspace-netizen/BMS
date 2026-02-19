@@ -434,8 +434,9 @@ const Inventaire = () => {
       const contentDisposition = response.headers['content-disposition'] || '';
       const match = contentDisposition.match(/filename="?([^"]+)"?/);
       const filename = match ? match[1] : 'inventaire_bms.xlsx';
+      const exportCount = response.headers['x-export-count'];
       triggerDownload(new Blob([response.data]), filename);
-      toast.success('Export Excel réussi');
+      toast.success(exportCount ? `Export Excel réussi (${exportCount} articles)` : 'Export Excel réussi');
     } catch (error) {
       toast.error('Erreur lors de l\'export');
     }
